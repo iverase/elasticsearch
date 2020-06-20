@@ -637,7 +637,7 @@ public final class DateFieldMapper extends FieldMapper {
         } else {
             try {
                 fullResolutionTimestamp = fieldType().parseFullResolution(dateAsString);
-                lowResolutionTimestamp = fieldType().parseLowResolution(dateAsString) / 3600L;
+                lowResolutionTimestamp = fieldType().parseLowResolution(dateAsString) / 3600000L;
             } catch (IllegalArgumentException | ElasticsearchParseException | DateTimeException e) {
                 if (ignoreMalformed.value()) {
                     context.addIgnoredField(mappedFieldType.name());
