@@ -95,10 +95,10 @@ public class DateFieldTypeTests extends FieldTypeTestCase<DateFieldType> {
         Directory dir = newDirectory();
         IndexWriter w = new IndexWriter(dir, new IndexWriterConfig(null));
         Document doc = new Document();
-        LongPoint field = new LongPoint("my_date", ft.parse("2015-10-12"));
+        LongPoint field = new LongPoint("my_date", ft.parseFullResolution("2015-10-12"));
         doc.add(field);
         w.addDocument(doc);
-        field.setLongValue(ft.parse("2016-04-03"));
+        field.setLongValue(ft.parseFullResolution("2016-04-03"));
         w.addDocument(doc);
         DirectoryReader reader = DirectoryReader.open(w);
 

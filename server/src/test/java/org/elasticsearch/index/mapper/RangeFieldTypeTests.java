@@ -278,11 +278,11 @@ public class RangeFieldTypeTests extends FieldTypeTestCase<RangeFieldType> {
 
         // get exact lower and upper bounds similar to what we would parse for `date` fields for same input strings
         DateFieldType dateFieldType = new DateFieldType("field");
-        long lowerBoundLong = dateFieldType.parseToLong(lowerAsString, !includeLower, null, formatter.toDateMathParser(), () -> 0);
+        long lowerBoundLong = dateFieldType.parseToLongFullResolution(lowerAsString, !includeLower, null, formatter.toDateMathParser(), () -> 0);
         if (includeLower == false) {
             ++lowerBoundLong;
         }
-        long upperBoundLong = dateFieldType.parseToLong(upperAsString, includeUpper, null, formatter.toDateMathParser(), () -> 0);
+        long upperBoundLong = dateFieldType.parseToLongFullResolution(upperAsString, includeUpper, null, formatter.toDateMathParser(), () -> 0);
         if (includeUpper == false) {
             --upperBoundLong;
         }

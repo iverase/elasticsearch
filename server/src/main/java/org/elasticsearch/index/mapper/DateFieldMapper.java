@@ -91,8 +91,13 @@ public final class DateFieldMapper extends FieldMapper {
     public enum Resolution {
         MILLISECONDS(CONTENT_TYPE, NumericType.DATE) {
             @Override
-            public long convert(Instant instant) {
+            public long convertFullResolution(Instant instant) {
                 return instant.toEpochMilli();
+            }
+
+            @Override
+            public long convertLowResolution(Instant instant) {
+                return instant.getEpochSecond();
             }
 
             @Override
@@ -112,8 +117,13 @@ public final class DateFieldMapper extends FieldMapper {
         },
         NANOSECONDS(DATE_NANOS_CONTENT_TYPE, NumericType.DATE_NANOSECONDS) {
             @Override
-            public long convert(Instant instant) {
+            public long convertFullResolution(Instant instant) {
                 return toLong(instant);
+            }
+
+            @Override
+            public long convertLowResolution(Instant instant) {
+                return instant.toEpochMilli();
             }
 
             @Override
@@ -151,7 +161,9 @@ public final class DateFieldMapper extends FieldMapper {
         /**
          * Convert an {@linkplain Instant} into a long value in this resolution.
          */
-        public abstract long convert(Instant instant);
+        public abstract long convertFullResolution(Instant instant);
+
+        public abstract long convertLowResolution(Instant instant);
 
         /**
          * Convert a long value in this resolution into an instant.
@@ -356,8 +368,12 @@ public final class DateFieldMapper extends FieldMapper {
             return dateMathParser;
         }
 
-        public long parse(String value) {
-            return resolution.convert(DateFormatters.from(dateTimeFormatter().parse(value)).toInstant());
+        public long parseFullResolution(String value) {
+            return resolution.convertFullResolution(DateFormatters.from(dateTimeFormatter().parse(value)).toInstant());
+        }
+
+        public long parseLowResolution(String value) {
+            return resolution.convertLowResolution(DateFormatters.from(dateTimeFormatter().parse(value)).toInstant());
         }
 
         @Override
@@ -398,7 +414,7 @@ public final class DateFieldMapper extends FieldMapper {
             if (lowerTerm == null) {
                 l = Long.MIN_VALUE;
             } else {
-                l = parseToLong(lowerTerm, !includeLower, timeZone, parser, nowSupplier);
+                l = parseToLongFullResolution(lowerTerm, !includeLower, timeZone, parser, nowSupplier);
                 if (includeLower == false) {
                     ++l;
                 }
@@ -406,7 +422,7 @@ public final class DateFieldMapper extends FieldMapper {
             if (upperTerm == null) {
                 u = Long.MAX_VALUE;
             } else {
-                u = parseToLong(upperTerm, includeUpper, timeZone, parser, nowSupplier);
+                u = parseToLongFullResolution(upperTerm, includeUpper, timeZone, parser, nowSupplier);
                 if (includeUpper == false) {
                     --u;
                 }
@@ -428,8 +444,8 @@ public final class DateFieldMapper extends FieldMapper {
             return query;
         }
 
-        public long parseToLong(Object value, boolean roundUp,
-                                @Nullable ZoneId zone, @Nullable DateMathParser forcedDateParser, LongSupplier now) {
+        public long parseToLongFullResolution(Object value, boolean roundUp,
+                                              @Nullable ZoneId zone, @Nullable DateMathParser forcedDateParser, LongSupplier now) {
             DateMathParser dateParser = dateMathParser();
             if (forcedDateParser != null) {
                 dateParser = forcedDateParser;
@@ -442,7 +458,24 @@ public final class DateFieldMapper extends FieldMapper {
                 strValue = value.toString();
             }
             Instant instant = dateParser.parse(strValue, now, roundUp, zone);
-            return resolution.convert(instant);
+            return resolution.convertFullResolution(instant);
+        }
+
+        public long parseToLongLowResolution(Object value, boolean roundUp,
+                                              @Nullable ZoneId zone, @Nullable DateMathParser forcedDateParser, LongSupplier now) {
+            DateMathParser dateParser = dateMathParser();
+            if (forcedDateParser != null) {
+                dateParser = forcedDateParser;
+            }
+
+            String strValue;
+            if (value instanceof BytesRef) {
+                strValue = ((BytesRef) value).utf8ToString();
+            } else {
+                strValue = value.toString();
+            }
+            Instant instant = dateParser.parse(strValue, now, roundUp, zone);
+            return resolution.convertLowResolution(instant);
         }
 
         @Override
@@ -455,7 +488,7 @@ public final class DateFieldMapper extends FieldMapper {
 
             long fromInclusive = Long.MIN_VALUE;
             if (from != null) {
-                fromInclusive = parseToLong(from, !includeLower, timeZone, dateParser, context::nowInMillis);
+                fromInclusive = parseToLongFullResolution(from, !includeLower, timeZone, dateParser, context::nowInMillis);
                 if (includeLower == false) {
                     if (fromInclusive == Long.MAX_VALUE) {
                         return Relation.DISJOINT;
@@ -466,7 +499,7 @@ public final class DateFieldMapper extends FieldMapper {
 
             long toInclusive = Long.MAX_VALUE;
             if (to != null) {
-                toInclusive = parseToLong(to, includeUpper, timeZone, dateParser, context::nowInMillis);
+                toInclusive = parseToLongFullResolution(to, includeUpper, timeZone, dateParser, context::nowInMillis);
                 if (includeUpper == false) {
                     if (toInclusive == Long.MIN_VALUE) {
                         return Relation.DISJOINT;
@@ -488,15 +521,15 @@ public final class DateFieldMapper extends FieldMapper {
         public Relation isFieldWithinRange(IndexReader reader, Instant fromInclusive, Instant toInclusive)
                 throws IOException {
             return isFieldWithinRange(reader,
-                    resolution.convert(resolution.clampToValidRange(fromInclusive)),
-                    resolution.convert(resolution.clampToValidRange(toInclusive)));
+                    resolution.convertFullResolution(resolution.clampToValidRange(fromInclusive)),
+                    resolution.convertFullResolution(resolution.clampToValidRange(toInclusive)));
         }
 
         /**
          * Return whether all values of the given {@link IndexReader} are within the range,
          * outside the range or cross the range.
-         * @param fromInclusive start date, inclusive, {@link Resolution#convert(Instant) converted} to the appropriate scale
-         * @param toInclusive end date, inclusive, {@link Resolution#convert(Instant) converted} to the appropriate scale
+         * @param fromInclusive start date, inclusive, {@link Resolution#convertFullResolution(Instant) converted} to the appropriate scale
+         * @param toInclusive end date, inclusive, {@link Resolution#convertFullResolution(Instant) converted} to the appropriate scale
          */
         private Relation isFieldWithinRange(IndexReader reader, long fromInclusive, long toInclusive) throws IOException {
             if (PointValues.size(reader, name()) == 0) {
@@ -593,15 +626,18 @@ public final class DateFieldMapper extends FieldMapper {
             dateAsString = context.parser().textOrNull();
         }
 
-        long timestamp;
+        long fullResolutionTimestamp;
+        long lowResolutionTimestamp;
         if (dateAsString == null) {
             if (nullValue == null) {
                 return;
             }
-            timestamp = nullValue;
+            fullResolutionTimestamp = nullValue;
+            lowResolutionTimestamp = nullValue;
         } else {
             try {
-                timestamp = fieldType().parse(dateAsString);
+                fullResolutionTimestamp = fieldType().parseFullResolution(dateAsString);
+                lowResolutionTimestamp = fieldType().parseLowResolution(dateAsString);
             } catch (IllegalArgumentException | ElasticsearchParseException | DateTimeException e) {
                 if (ignoreMalformed.value()) {
                     context.addIgnoredField(mappedFieldType.name());
@@ -613,15 +649,19 @@ public final class DateFieldMapper extends FieldMapper {
         }
 
         if (mappedFieldType.isSearchable()) {
-            context.doc().add(new LongPoint(fieldType().name(), timestamp));
+            if (fieldType().hasDocValues()) {
+                context.doc().add(new LongPoint(fieldType().name(), fullResolutionTimestamp));
+            } else {
+                context.doc().add(new LongPoint(fieldType().name(), lowResolutionTimestamp));
+            }
         }
         if (fieldType().hasDocValues()) {
-            context.doc().add(new SortedNumericDocValuesField(fieldType().name(), timestamp));
+            context.doc().add(new SortedNumericDocValuesField(fieldType().name(), fullResolutionTimestamp));
         } else if (fieldType.stored() || mappedFieldType.isSearchable()) {
             createFieldNamesField(context);
         }
         if (fieldType.stored()) {
-            context.doc().add(new StoredField(fieldType().name(), timestamp));
+            context.doc().add(new StoredField(fieldType().name(), fullResolutionTimestamp));
         }
     }
 

@@ -87,7 +87,7 @@ public class DistanceFeatureQueryBuilderTests extends AbstractQueryTestCase<Dist
         } else { // if (fieldName.equals(DATE_FIELD_NAME))
             MapperService mapperService = context.getMapperService();
             DateFieldType fieldType = (DateFieldType) mapperService.fieldType(fieldName);
-            long originLong = fieldType.parseToLong(origin, true, null, null, context::nowInMillis);
+            long originLong = fieldType.parseToLongFullResolution(origin, true, null, null, context::nowInMillis);
             TimeValue pivotVal = TimeValue.parseTimeValue(pivot, DistanceFeatureQueryBuilder.class.getSimpleName() + ".pivot");
             long pivotLong;
             if (fieldType.resolution() == DateFieldMapper.Resolution.MILLISECONDS) {

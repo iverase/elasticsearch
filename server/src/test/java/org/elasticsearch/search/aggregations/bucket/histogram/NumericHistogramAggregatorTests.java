@@ -134,7 +134,7 @@ public class NumericHistogramAggregatorTests extends AggregatorTestCase {
                     indexWriter.commit();
                 }
 
-                long instant = fieldType.parse(date);
+                long instant = fieldType.parseFullResolution(date);
                 document.add(new SortedNumericDocValuesField(fieldName, instant));
                 indexWriter.addDocument(document);
                 document.clear();

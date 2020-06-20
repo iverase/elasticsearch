@@ -768,7 +768,7 @@ public class MinAggregatorTests extends AggregatorTestCase {
         // Check that we decode a dates "just like" the doc values instance.
         Instant expected = Instant.from(DateFieldMapper.DEFAULT_DATE_TIME_FORMATTER.parse("2020-01-01T00:00:00Z"));
         byte[] scratch = new byte[8];
-        LongPoint.encodeDimension(DateFieldMapper.Resolution.MILLISECONDS.convert(expected), scratch, 0);
+        LongPoint.encodeDimension(DateFieldMapper.Resolution.MILLISECONDS.convertFullResolution(expected), scratch, 0);
         assertThat(
             MinAggregator.getPointReaderOrNull(
                 mockSearchContext(new MatchAllDocsQuery()),
@@ -776,7 +776,7 @@ public class MinAggregatorTests extends AggregatorTestCase {
                 mockDateValuesSourceConfig("number", true, DateFieldMapper.Resolution.MILLISECONDS)
             ).apply(scratch), equalTo(expected.toEpochMilli())
         );
-        LongPoint.encodeDimension(DateFieldMapper.Resolution.NANOSECONDS.convert(expected), scratch, 0);
+        LongPoint.encodeDimension(DateFieldMapper.Resolution.NANOSECONDS.convertFullResolution(expected), scratch, 0);
         assertThat(
             MinAggregator.getPointReaderOrNull(
                 mockSearchContext(new MatchAllDocsQuery()),

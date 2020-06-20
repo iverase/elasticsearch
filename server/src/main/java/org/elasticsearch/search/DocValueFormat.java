@@ -246,7 +246,7 @@ public interface DocValueFormat extends NamedWriteable {
 
         @Override
         public long parseLong(String value, boolean roundUp, LongSupplier now) {
-            return resolution.convert(parser.parse(value, now, roundUp, timeZone));
+            return resolution.convertFullResolution(parser.parse(value, now, roundUp, timeZone));
         }
 
         @Override
