@@ -649,7 +649,7 @@ public final class DateFieldMapper extends FieldMapper {
         }
 
         if (mappedFieldType.isSearchable()) {
-            if (fieldType().hasDocValues()) {
+            if (fieldType().hasDocValues() == false) {
                 context.doc().add(new LongPoint(fieldType().name(), fullResolutionTimestamp));
             } else {
                 context.doc().add(new LongPoint(fieldType().name(), lowResolutionTimestamp));
