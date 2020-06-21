@@ -249,7 +249,7 @@ public class AutoDateHistogramAggregatorTests extends DateHistogramAggregatorTes
             expectedMax.put("2020-01-01T00:00:00.000Z", 2.0);
             expectedMax.put("2021-01-01T00:00:00.000Z", 3.0);
             assertThat(maxAsMap(ak1adh), equalTo(expectedMax));
-    
+
             StringTerms.Bucket b = terms.getBucketByKey("b");
             StringTerms bk1 = b.getAggregations().get("k1");
             StringTerms.Bucket bk1a = bk1.getBucketByKey("a");
@@ -273,10 +273,10 @@ public class AutoDateHistogramAggregatorTests extends DateHistogramAggregatorTes
 
     public void testAsSubAggWithIncreasedRounding() throws IOException {
         CheckedBiConsumer<RandomIndexWriter, DateFieldMapper.DateFieldType, IOException> buildIndex = (iw, dft) -> {
-            long start = dft.parse("2020-01-01T00:00:00Z");
-            long end = dft.parse("2021-01-01T00:00:00Z");
-            long useC = dft.parse("2020-07-01T00:00Z");
-            long anHour = dft.resolution().convert(Instant.ofEpochSecond(TimeUnit.HOURS.toSeconds(1)));
+            long start = dft.parseFullResolution("2020-01-01T00:00:00Z");
+            long end = dft.parseFullResolution("2021-01-01T00:00:00Z");
+            long useC = dft.parseFullResolution("2020-07-01T00:00Z");
+            long anHour = dft.resolution().convertFullResolution(Instant.ofEpochSecond(TimeUnit.HOURS.toSeconds(1)));
             List<List<IndexableField>> docs = new ArrayList<>();
             BytesRef aBytes = new BytesRef("a");
             BytesRef bBytes = new BytesRef("b");
@@ -341,9 +341,9 @@ public class AutoDateHistogramAggregatorTests extends DateHistogramAggregatorTes
 
     public void testAsSubAggInManyBuckets() throws IOException {
         CheckedBiConsumer<RandomIndexWriter, DateFieldMapper.DateFieldType, IOException> buildIndex = (iw, dft) -> {
-            long start = dft.parse("2020-01-01T00:00:00Z");
-            long end = dft.parse("2021-01-01T00:00:00Z");
-            long anHour = dft.resolution().convert(Instant.ofEpochSecond(TimeUnit.HOURS.toSeconds(1)));
+            long start = dft.parseFullResolution("2020-01-01T00:00:00Z");
+            long end = dft.parseFullResolution("2021-01-01T00:00:00Z");
+            long anHour = dft.resolution().convertFullResolution(Instant.ofEpochSecond(TimeUnit.HOURS.toSeconds(1)));
             List<List<IndexableField>> docs = new ArrayList<>();
             int n = 0;
             for (long d = start; d < end; d += anHour) {
@@ -817,7 +817,7 @@ public class AutoDateHistogramAggregatorTests extends DateHistogramAggregatorTes
         fullDocCount.clear();
         fullDocCount.putAll(skeletonDocCount);
         for (int minute = 3; minute < 15; minute++) {
-            fullDocCount.put(String.format(Locale.ROOT, "2017-02-01T09:%02d:00.000Z", minute), 0);    
+            fullDocCount.put(String.format(Locale.ROOT, "2017-02-01T09:%02d:00.000Z", minute), 0);
         }
         testSearchAndReduceCase(DEFAULT_QUERY, datesForMinuteInterval,
             aggregation -> aggregation.setNumBuckets(15).field(DATE_FIELD),

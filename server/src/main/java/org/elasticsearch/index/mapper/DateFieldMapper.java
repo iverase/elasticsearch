@@ -261,8 +261,9 @@ public final class DateFieldMapper extends FieldMapper {
         @Override
         public DateFieldMapper build(BuilderContext context) {
             DateFieldType ft = setupFieldType(context);
-            Long nullTimestamp = nullValue == null ? null : ft.dateTimeFormatter.parseMillis(nullValue);
-            return new DateFieldMapper(name, fieldType, ft, ignoreMalformed(context), nullTimestamp, nullValue,
+            Long nullFullTimestamp = nullValue == null ? null : ft.dateTimeFormatter.parseMillis(nullValue);
+            Long nullLowTimestamp = nullValue == null ? null : nullFullTimestamp / 1000;
+            return new DateFieldMapper(name, fieldType, ft, ignoreMalformed(context), nullFullTimestamp, nullLowTimestamp, nullValue,
                 multiFieldsBuilder.build(this, context), copyTo);
         }
     }
@@ -580,20 +581,23 @@ public final class DateFieldMapper extends FieldMapper {
     }
 
     private Explicit<Boolean> ignoreMalformed;
-    private final Long nullValue;
+    private final Long nullValueFullResolution;
+    private final Long nullValueLowResolution;
     private final String nullValueAsString;
 
     private DateFieldMapper(
-            String simpleName,
-            FieldType fieldType,
-            MappedFieldType mappedFieldType,
-            Explicit<Boolean> ignoreMalformed,
-            Long nullValue, String nullValueAsString,
-            MultiFields multiFields,
-            CopyTo copyTo) {
+        String simpleName,
+        FieldType fieldType,
+        MappedFieldType mappedFieldType,
+        Explicit<Boolean> ignoreMalformed,
+        Long nullValueFullResolution, Long nullValueLowResolution,
+        String nullValueAsString,
+        MultiFields multiFields,
+        CopyTo copyTo) {
         super(simpleName, fieldType, mappedFieldType, multiFields, copyTo);
         this.ignoreMalformed = ignoreMalformed;
-        this.nullValue = nullValue;
+        this.nullValueFullResolution = nullValueFullResolution;
+        this.nullValueLowResolution = nullValueLowResolution;
         this.nullValueAsString = nullValueAsString;
     }
 
@@ -629,15 +633,15 @@ public final class DateFieldMapper extends FieldMapper {
         long fullResolutionTimestamp;
         long lowResolutionTimestamp;
         if (dateAsString == null) {
-            if (nullValue == null) {
+            if (nullValueFullResolution == null) {
                 return;
             }
-            fullResolutionTimestamp = nullValue;
-            lowResolutionTimestamp = nullValue;
+            fullResolutionTimestamp = nullValueFullResolution;
+            lowResolutionTimestamp = nullValueLowResolution;
         } else {
             try {
                 fullResolutionTimestamp = fieldType().parseFullResolution(dateAsString);
-                lowResolutionTimestamp = fieldType().parseLowResolution(dateAsString) / 3600000L;
+                lowResolutionTimestamp = fieldType().parseLowResolution(dateAsString);
             } catch (IllegalArgumentException | ElasticsearchParseException | DateTimeException e) {
                 if (ignoreMalformed.value()) {
                     context.addIgnoredField(mappedFieldType.name());
@@ -655,11 +659,13 @@ public final class DateFieldMapper extends FieldMapper {
                 context.doc().add(new LongPoint(fieldType().name(), fullResolutionTimestamp));
             }
         }
+
         if (fieldType().hasDocValues()) {
             context.doc().add(new SortedNumericDocValuesField(fieldType().name(), fullResolutionTimestamp));
         } else if (fieldType.stored() || mappedFieldType.isSearchable()) {
             createFieldNamesField(context);
         }
+
         if (fieldType.stored()) {
             context.doc().add(new StoredField(fieldType().name(), fullResolutionTimestamp));
         }
@@ -690,7 +696,7 @@ public final class DateFieldMapper extends FieldMapper {
             builder.field("ignore_malformed", ignoreMalformed.value());
         }
 
-        if (nullValue != null) {
+        if (nullValueFullResolution != null) {
             builder.field("null_value", nullValueAsString);
         }
 
