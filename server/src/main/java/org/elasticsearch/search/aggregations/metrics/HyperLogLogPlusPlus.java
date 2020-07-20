@@ -73,6 +73,19 @@ public final class HyperLogLogPlusPlus implements Releasable {
     }
 
     /**
+     * Compute the required threshold for the given precision.
+     */
+    public static long thresholdFromPrecision(int precision) {
+        if (precision < MIN_PRECISION) {
+            throw new IllegalArgumentException("Min precision is " + MIN_PRECISION + ", got " + precision);
+        }
+        if (precision > MAX_PRECISION) {
+            throw new IllegalArgumentException("Max precision is " + MAX_PRECISION + ", got " + precision);
+        }
+       return HLLPRECISIONTOTHRESHOLDS[precision - 4];
+    }
+
+    /**
      * Return the expected per-bucket memory usage for the given precision.
      */
     public static long memoryUsage(int precision) {
@@ -765,6 +778,23 @@ public final class HyperLogLogPlusPlus implements Releasable {
         120000,
         350000 };
 
+    private static final long[] HLLPRECISIONTOTHRESHOLDS = new long[] {
+        2,
+        5,
+        11,
+        23,
+        47,
+        95,
+        191,
+        383,
+        767,
+        1535,
+        3071,
+        6143,
+        12287,
+        24575,
+        350000 };
+
     private final BigArrays bigArrays;
     private final OpenBitSet algorithm;
     private ByteArray runLens;
@@ -879,6 +909,40 @@ public final class HyperLogLogPlusPlus implements Releasable {
     private void collectHll(long bucket, long index, int runLen) {
         final long bucketIndex = (bucket << p) + index;
         runLens.set(bucketIndex, (byte) Math.max(runLen, runLens.get(bucketIndex)));
+    }
+
+    /**
+     * Copy the hll skeptch at the given {@code bucket} into the provided {@code byteArray}
+     * @param bucket the position of the sketch
+     * @param byteArray The array to copy the HLL sketch. The size of the array must be &ge; (1 &lt;&lt; precision).
+     */
+    public void getRunLens(long bucket, ByteArray byteArray) {
+        if (algorithm.get(bucket) == LINEAR_COUNTING) {
+            upgradeToHll(bucket);
+        }
+        final long bucketIndex = (bucket << p);
+        for (int i = 0; i < m; i++) {
+            byteArray.set(i, this.runLens.get(bucketIndex + i));
+        }
+    }
+
+    /**
+     * Copy the provided sketch to this HLL structure at position {code bucket}.
+     * The precision of the given sketch must the same as the precision of this structure.
+     * @param bucket the position of the sketch
+     * @param runLens The HLL sketch as an byte array
+     */
+    public void collectRunLens(long bucket, ByteArray runLens) {
+        if (algorithm.get(bucket) == LINEAR_COUNTING) {
+            upgradeToHll(bucket);
+        }
+        if (runLens.size() != m) {
+            throw new IllegalArgumentException("expected runLens of size " + m + ", got" + runLens.size());
+        }
+        final long bucketIndex = (bucket << p);
+        for (int i = 0; i < m; ++i) {
+            this.runLens.set(bucketIndex + i, (byte) Math.max(runLens.get(i), this.runLens.get(bucketIndex + i)));
+        }
     }
 
     public long cardinality(long bucket) {

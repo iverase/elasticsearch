@@ -22,7 +22,7 @@ package org.elasticsearch.search.aggregations.metrics;
 import com.carrotsearch.hppc.BitMixer;
 import com.carrotsearch.hppc.IntHashSet;
 import org.elasticsearch.common.util.BigArrays;
-import org.elasticsearch.search.aggregations.metrics.HyperLogLogPlusPlus;
+import org.elasticsearch.common.util.ByteArray;
 import org.elasticsearch.test.ESTestCase;
 
 import static org.elasticsearch.search.aggregations.metrics.HyperLogLogPlusPlus.MAX_PRECISION;
@@ -126,5 +126,32 @@ public class HyperLogLogPlusPlusTests extends ESTestCase {
         assertEquals(16, HyperLogLogPlusPlus.precisionFromThreshold(10000));
         assertEquals(18, HyperLogLogPlusPlus.precisionFromThreshold(100000));
         assertEquals(18, HyperLogLogPlusPlus.precisionFromThreshold(1000000));
+    }
+
+
+    public void testThresholdFromPrecision() {
+        for (int i =0; i < 100; i++) {
+            int precision = randomIntBetween(4, 18);
+            long threshold = HyperLogLogPlusPlus.thresholdFromPrecision(precision);
+            assertEquals(precision, HyperLogLogPlusPlus.precisionFromThreshold(threshold));
+        }
+    }
+
+    public void testFromHllSketch() {
+        final HyperLogLogPlusPlus single = new HyperLogLogPlusPlus(10, BigArrays.NON_RECYCLING_INSTANCE, 0);
+        final int numValues = randomIntBetween(2000, 100000);
+        final int maxValue = randomIntBetween(1, randomBoolean() ? 1000: 1000000);
+        for (int i =0; i < numValues; i++) {
+            final int n = randomInt(maxValue);
+            final long hash = BitMixer.mix64(n);
+            single.collect(0, hash);
+        }
+        final HyperLogLogPlusPlus merge = new HyperLogLogPlusPlus(10, BigArrays.NON_RECYCLING_INSTANCE, 0);
+        merge.merge(0, single, 0);
+        final HyperLogLogPlusPlus copy = new HyperLogLogPlusPlus(10, BigArrays.NON_RECYCLING_INSTANCE, 0);
+        ByteArray byteArray = BigArrays.NON_RECYCLING_INSTANCE.newByteArray(1 << 10);
+        single.getRunLens(0, byteArray);
+        copy.collectRunLens(0, byteArray);
+        assertEquals(single.cardinality(0), copy.cardinality(0));
     }
 }

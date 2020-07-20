@@ -32,6 +32,7 @@ import org.elasticsearch.xpack.analytics.action.AnalyticsInfoTransportAction;
 import org.elasticsearch.xpack.analytics.action.AnalyticsUsageTransportAction;
 import org.elasticsearch.xpack.analytics.action.TransportAnalyticsStatsAction;
 import org.elasticsearch.xpack.analytics.aggregations.AnalyticsAggregatorFactory;
+import org.elasticsearch.xpack.analytics.mapper.HllFieldMapper;
 import org.elasticsearch.xpack.analytics.normalize.NormalizePipelineAggregationBuilder;
 import org.elasticsearch.xpack.analytics.boxplot.BoxplotAggregationBuilder;
 import org.elasticsearch.xpack.analytics.boxplot.InternalBoxplot;
@@ -57,7 +58,6 @@ import org.elasticsearch.xpack.core.analytics.action.AnalyticsStatsAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -137,26 +137,28 @@ public class AnalyticsPlugin extends Plugin implements SearchPlugin, ActionPlugi
 
     @Override
     public Map<String, Mapper.TypeParser> getMappers() {
-        return Collections.singletonMap(HistogramFieldMapper.CONTENT_TYPE, new HistogramFieldMapper.TypeParser());
+        return Map.of(HistogramFieldMapper.CONTENT_TYPE, new HistogramFieldMapper.TypeParser(),
+            HllFieldMapper.CONTENT_TYPE, new HllFieldMapper.TypeParser());
     }
 
     @Override
     public List<Consumer<ValuesSourceRegistry.Builder>> getAggregationExtentions() {
-            return List.of(
-                AnalyticsAggregatorFactory::registerPercentilesAggregator,
-                AnalyticsAggregatorFactory::registerPercentileRanksAggregator,
-                AnalyticsAggregatorFactory::registerHistoBackedSumAggregator,
-                AnalyticsAggregatorFactory::registerHistoBackedValueCountAggregator,
-                AnalyticsAggregatorFactory::registerHistoBackedAverageAggregator,
-                AnalyticsAggregatorFactory::registerHistoBackedHistogramAggregator
-            );
+        return List.of(
+            AnalyticsAggregatorFactory::registerPercentilesAggregator,
+            AnalyticsAggregatorFactory::registerPercentileRanksAggregator,
+            AnalyticsAggregatorFactory::registerHistoBackedSumAggregator,
+            AnalyticsAggregatorFactory::registerHistoBackedValueCountAggregator,
+            AnalyticsAggregatorFactory::registerHistoBackedAverageAggregator,
+            AnalyticsAggregatorFactory::registerHistoBackedHistogramAggregator,
+            AnalyticsAggregatorFactory::registerCardinalityBackedCardinalityAggregator
+        );
     }
 
     @Override
     public Collection<Object> createComponents(Client client, ClusterService clusterService, ThreadPool threadPool,
-            ResourceWatcherService resourceWatcherService, ScriptService scriptService, NamedXContentRegistry xContentRegistry,
-            Environment environment, NodeEnvironment nodeEnvironment, NamedWriteableRegistry namedWriteableRegistry,
-            IndexNameExpressionResolver indexNameExpressionResolver, Supplier<RepositoriesService> repositoriesServiceSupplier) {
+                                               ResourceWatcherService resourceWatcherService, ScriptService scriptService, NamedXContentRegistry xContentRegistry,
+                                               Environment environment, NodeEnvironment nodeEnvironment, NamedWriteableRegistry namedWriteableRegistry,
+                                               IndexNameExpressionResolver indexNameExpressionResolver, Supplier<RepositoriesService> repositoriesServiceSupplier) {
         return singletonList(usage);
     }
 
