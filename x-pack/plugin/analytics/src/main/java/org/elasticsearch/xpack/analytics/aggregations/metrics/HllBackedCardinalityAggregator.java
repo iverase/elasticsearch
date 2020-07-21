@@ -185,6 +185,7 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
                         tmp.set(i, (byte) (runLen + precisionDiff));
                         value.skip(registersToMerge - 1);
                     } else {
+                        tmp.set(i, (byte) 0);
                         // Find the first set value and compute the runLen for the precision change
                         for (int j = 1; j < registersToMerge; j++) {
                             value.next();
