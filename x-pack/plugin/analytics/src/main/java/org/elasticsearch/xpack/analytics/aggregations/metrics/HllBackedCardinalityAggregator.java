@@ -110,9 +110,7 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
 
     @Override
     protected void doClose() {
-        if (collector != null) {
-            Releasables.close(counts, collectorArray);
-        }
+        Releasables.close(counts, collectorArray);
     }
 
     private static class EmptyCollector extends LeafBucketCollector {

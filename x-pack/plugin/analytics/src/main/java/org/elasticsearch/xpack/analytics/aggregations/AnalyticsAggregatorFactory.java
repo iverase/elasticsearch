@@ -10,6 +10,7 @@ import org.elasticsearch.search.aggregations.bucket.histogram.HistogramAggregato
 import org.elasticsearch.search.aggregations.metrics.AvgAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.CardinalityAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.CardinalityAggregatorSupplier;
+import org.elasticsearch.search.aggregations.metrics.HyperLogLogPlusPlus;
 import org.elasticsearch.search.aggregations.metrics.MetricAggregatorSupplier;
 import org.elasticsearch.search.aggregations.metrics.PercentileRanksAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.PercentilesAggregationBuilder;
@@ -113,8 +114,9 @@ public class AnalyticsAggregatorFactory {
                 if (fieldType.precision() >= precision) {
                     return new HllBackedCardinalityAggregator(name, valuesSource, precision, fieldType.precision(), context, parent, metadata);
                 }
-                throw new IllegalArgumentException("Cardinality aggregation precision: ["  + precision + "] " +
-                    "is not compatible with doc value precision " + fieldType.precision());
+                throw new IllegalArgumentException("Cardinality aggregation precision ["  + precision + "] " +
+                    "is not compatible with field precision [" + fieldType.precision() + "]. Precision threshold must " +
+                    "be lower or equal than [" + HyperLogLogPlusPlus.thresholdFromPrecision(fieldType.precision()) + "]");
             });
     }
 }
