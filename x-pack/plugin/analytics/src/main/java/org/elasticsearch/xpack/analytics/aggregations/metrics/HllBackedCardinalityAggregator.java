@@ -179,10 +179,10 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
                 if (runLen != 0) {
                     value.skip(registersToMerge - i - 1);
                     if (i == 0) {
-                        // If the first element is set, then runLen is this value plus the change in precision
+                        // If the first element is set, then runLen is the current runLen plus the change in precision
                         return (byte) (runLen + precisionDiff);
                     } else {
-                        // If any other register is set value, the runLen is computed from the register value
+                        // If any other register is set, the runLen is computed from the register position
                         return (byte) (precisionDiff - (int) (Math.log(i) / Math.log(2)));
                     }
                 }
