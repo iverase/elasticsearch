@@ -34,21 +34,20 @@ import java.util.Map;
 public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.SingleValue {
 
     private final int precision;
+    private final int fieldPrecision;
     private final ValuesSource valuesSource;
     @Nullable
     private final HyperLogLogPlusPlus counts;
     @Nullable
-    private final ByteArray fieldArray;
-    @Nullable
-    private final ByteArray finalArray;
+    private final ByteArray collectorArray;
 
-    private HllCollector collector;
+    private LeafBucketCollector collector;
 
     public HllBackedCardinalityAggregator(
             String name,
             ValuesSourceConfig valuesSourceConfig,
             int precision,
-            int fieldTypePrecision,
+            int fieldPrecision,
             SearchContext context,
             Aggregator parent,
             Map<String, Object> metadata) throws IOException {
@@ -56,15 +55,13 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
         // TODO: Stop using nulls here
         this.valuesSource = valuesSourceConfig.hasValues() ? valuesSourceConfig.getValuesSource() : null;
         this.precision = precision;
+        this.fieldPrecision = fieldPrecision;
         if (valuesSource == null) {
             this.counts = null;
-            this.fieldArray = null;
-            this.finalArray = null;
+            this.collectorArray = null;
         } else {
-            this.counts = new HyperLogLogPlusPlus(fieldTypePrecision, context.bigArrays(), 1);
-            this.fieldArray = context.bigArrays().newByteArray(1 << fieldTypePrecision);
-            // Only used if we need to decrease the precision of the HLL sketch
-            this.finalArray = precision == fieldTypePrecision ? null :  context.bigArrays().newByteArray(1 << precision);
+            this.counts = new HyperLogLogPlusPlus(precision, context.bigArrays(), 1);
+            this.collectorArray = context.bigArrays().newByteArray(1 << precision);
         }
     }
 
@@ -80,7 +77,11 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
             return new EmptyCollector();
         }
         HllValuesSource.HllSketch source = (HllValuesSource.HllSketch) valuesSource;
-        collector = new HllCollector(counts, source.getHllValues(ctx), fieldArray);
+        if (precision == fieldPrecision) {
+            collector = new EqualPrecisionHllCollector(counts, source.getHllValues(ctx), collectorArray);
+        } else {
+            collector = new DifferentPrecisionHllCollector(counts, source.getHllValues(ctx), collectorArray, fieldPrecision);
+        }
         return collector;
     }
 
@@ -98,44 +99,8 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
         // We need to build a copy because the returned Aggregation needs remain usable after
         // this Aggregator (and its HLL++ counters) is released.
         HyperLogLogPlusPlus copy = new HyperLogLogPlusPlus(precision, BigArrays.NON_RECYCLING_INSTANCE, 1);
-        if (precision == counts.precision()) {
-            copy.merge(0, counts, owningBucketOrdinal);
-        } else {
-            // We need to reduce the precision of the sketch
-            counts.getRunLens(owningBucketOrdinal, fieldArray);
-            reducePrecision(counts.precision(), precision, fieldArray, finalArray);
-            copy.collectRunLens(0, finalArray);
-        }
+        copy.merge(0, counts, owningBucketOrdinal);
         return new InternalCardinality(name, copy, metadata());
-    }
-
-    private static void reducePrecision(int initialPrecision,
-                                        int finalPrecision,
-                                        ByteArray initialArray,
-                                        ByteArray finalArray) {
-        assert initialPrecision >= finalPrecision;
-        assert initialArray.size() == 1 << initialPrecision;
-        assert finalArray.size() == 1 << finalPrecision;
-
-        final int m = 1 << initialPrecision;
-        final int precisionDiff = initialPrecision - finalPrecision;
-        final int registersToMerge = 1 << precisionDiff;
-
-        for (int i = 0, j = 0; i < m; i += registersToMerge, j++) {
-            final byte runLen = initialArray.get(i);
-            if (runLen != 0) {
-                // If the first element is set, then runLen is this value plus the change in precision
-                finalArray.set(j, (byte) (runLen + precisionDiff));
-            } else {
-                // Find the first set value and compute the runLen for the precision change
-                for (int k = 1; k < registersToMerge; k++) {
-                    if (initialArray.get(i + k) != 0) {
-                        finalArray.set(j, (byte) (precisionDiff - (int) (Math.log(k) / Math.log(2))));
-                        break;
-                    }
-                }
-            }
-        }
     }
 
     @Override
@@ -146,7 +111,7 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
     @Override
     protected void doClose() {
         if (collector != null) {
-            Releasables.close(counts, fieldArray, finalArray);
+            Releasables.close(counts, collectorArray);
         }
     }
 
@@ -158,29 +123,82 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
         }
     }
 
-    private static class HllCollector extends LeafBucketCollector {
+    private static class EqualPrecisionHllCollector extends LeafBucketCollector {
 
         private final HllValues values;
         private final HyperLogLogPlusPlus counts;
         private final ByteArray tmp;
+        final int m;
 
-        HllCollector(HyperLogLogPlusPlus counts, HllValues values, ByteArray byteArray) {
+        EqualPrecisionHllCollector(HyperLogLogPlusPlus counts, HllValues values, ByteArray byteArray) {
             this.counts = counts;
             this.values = values;
             this.tmp = byteArray;
+            this.m = 1 << counts.precision();
         }
 
         @Override
         public void collect(int doc, long bucketOrd) throws IOException {
             if (values.advanceExact(doc)) {
                 final HllValue value = values.hllValue();
-                int i = 0;
-                while(value.next()) {
-                    tmp.set(i++, value.value());
+                for (int i = 0; i < m; i++) {
+                    value.next();
+                    tmp.set(i, value.value());
                 }
-                assert i == 1 << counts.precision();
+                assert value.next() == false;
+                counts.collectRunLens(bucketOrd, tmp);
             }
-            counts.collectRunLens(bucketOrd, tmp);
+
+        }
+    }
+
+    private static class DifferentPrecisionHllCollector extends LeafBucketCollector {
+
+        private final HllValues values;
+        private final HyperLogLogPlusPlus counts;
+        private final ByteArray tmp;
+        final int m;
+        final int precisionDiff;
+        final int registersToMerge;
+
+        DifferentPrecisionHllCollector(HyperLogLogPlusPlus counts,
+                                       HllValues values,
+                                       ByteArray byteArray,
+                                       int fieldPrecision) {
+            this.counts = counts;
+            this.values = values;
+            this.tmp = byteArray;
+            this.m = 1 << fieldPrecision;
+            this.precisionDiff = fieldPrecision - counts.precision();
+            this.registersToMerge = 1 << precisionDiff;
+        }
+
+        @Override
+        public void collect(int doc, long bucketOrd) throws IOException {
+            if (values.advanceExact(doc)) {
+                final HllValue value = values.hllValue();
+                for (int i = 0, j = 0; i < m; i += registersToMerge, j++) {
+                    value.next();
+                    final byte runLen = value.value();
+                    if (runLen != 0) {
+                        // If the first element is set, then runLen is this value plus the change in precision
+                        tmp.set(j, (byte) (runLen + precisionDiff));
+                        value.skip(registersToMerge - 1);
+                    } else {
+                        // Find the first set value and compute the runLen for the precision change
+                        for (int k = 1; k < registersToMerge; k++) {
+                            value.next();
+                            if (value.value() != 0) {
+                                tmp.set(j, (byte) (precisionDiff - (int) (Math.log(k) / Math.log(2))));
+                                value.skip(registersToMerge - k - 1);
+                                break;
+                            }
+                        }
+                    }
+                }
+                assert value.next() == false;
+                counts.collectRunLens(bucketOrd, tmp);
+            }
         }
     }
 }

@@ -26,4 +26,10 @@ public abstract class HllValue {
      * @return the current value of the runLen array
      */
     public abstract byte value();
+
+    /**
+     * Skips over and discards n bytes of data from this HLL value.
+     * @param bytes the number of bytes to skip
+     */
+    public abstract void skip(int bytes);
 }

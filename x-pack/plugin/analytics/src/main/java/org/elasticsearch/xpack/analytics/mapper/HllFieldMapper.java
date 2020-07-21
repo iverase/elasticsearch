@@ -460,5 +460,10 @@ public class HllFieldMapper extends FieldMapper {
             }
             return value;
         }
+
+        @Override
+        public void skip(int bytes) {
+            dataInput.skipBytes(bytes);
+        }
     }
 }
