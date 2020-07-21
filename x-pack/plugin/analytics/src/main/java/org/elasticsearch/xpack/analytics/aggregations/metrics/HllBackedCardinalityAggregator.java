@@ -72,7 +72,7 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
     public LeafBucketCollector getLeafCollector(LeafReaderContext ctx,
                                                LeafBucketCollector sub) throws IOException {
         if (valuesSource == null) {
-            return new EmptyCollector();
+            return LeafBucketCollector.NO_OP_COLLECTOR;
         }
         HllValuesSource.HllSketch source = (HllValuesSource.HllSketch) valuesSource;
         if (precision == fieldPrecision) {
@@ -108,14 +108,6 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
     @Override
     protected void doClose() {
         Releasables.close(counts, collectorArray);
-    }
-
-    private static class EmptyCollector extends LeafBucketCollector {
-
-        @Override
-        public void collect(int doc, long bucketOrd) {
-            // no-op
-        }
     }
 
     private static class EqualPrecisionHllCollector extends LeafBucketCollector {
