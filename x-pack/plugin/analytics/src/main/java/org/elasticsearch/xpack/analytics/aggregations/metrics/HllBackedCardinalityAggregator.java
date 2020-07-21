@@ -115,7 +115,7 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
         private final HllValues values;
         private final HyperLogLogPlusPlus counts;
         private final ByteArray tmp;
-        final int m;
+        private final int m;
 
         EqualPrecisionHllCollector(HyperLogLogPlusPlus counts, HllValues values, ByteArray byteArray) {
             this.counts = counts;
@@ -143,9 +143,9 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
         private final HllValues values;
         private final HyperLogLogPlusPlus counts;
         private final ByteArray tmp;
-        final int m;
-        final int precisionDiff;
-        final int registersToMerge;
+        private final int m;
+        private final int precisionDiff;
+        private final int registersToMerge;
 
         DifferentPrecisionHllCollector(HyperLogLogPlusPlus counts,
                                        HllValues values,
