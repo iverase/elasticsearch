@@ -116,6 +116,6 @@ setup:
   - match: { aggregations.term_agg.buckets.0.field_cardinality.value: 115 }
   - match: { aggregations.term_agg.buckets.1.key: "2" }
   - match: { aggregations.term_agg.buckets.1.doc_count: 2 }
-  - match: { aggregations.term_agg.buckets.1.field_cardinality.value: 230 }
+  - match: { aggregations.term_agg.buckets.1.field_cardinality.value: 115 }
 
 

@@ -148,7 +148,6 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
                 assert value.next() == false;
                 counts.collectRunLens(bucketOrd, tmp);
             }
-
         }
     }
 
