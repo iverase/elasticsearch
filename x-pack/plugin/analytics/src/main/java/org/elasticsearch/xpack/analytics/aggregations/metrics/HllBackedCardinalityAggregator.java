@@ -168,7 +168,7 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
             this.counts = counts;
             this.values = values;
             this.tmp = byteArray;
-            this.m = 1 << fieldPrecision;
+            this.m = 1 << counts.precision();
             this.precisionDiff = fieldPrecision - counts.precision();
             this.registersToMerge = 1 << precisionDiff;
         }
@@ -177,20 +177,20 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
         public void collect(int doc, long bucketOrd) throws IOException {
             if (values.advanceExact(doc)) {
                 final HllValue value = values.hllValue();
-                for (int i = 0, j = 0; i < m; i += registersToMerge, j++) {
+                for (int i = 0; i < m; i++) {
                     value.next();
                     final byte runLen = value.value();
                     if (runLen != 0) {
                         // If the first element is set, then runLen is this value plus the change in precision
-                        tmp.set(j, (byte) (runLen + precisionDiff));
+                        tmp.set(i, (byte) (runLen + precisionDiff));
                         value.skip(registersToMerge - 1);
                     } else {
                         // Find the first set value and compute the runLen for the precision change
-                        for (int k = 1; k < registersToMerge; k++) {
+                        for (int j = 1; j < registersToMerge; j++) {
                             value.next();
                             if (value.value() != 0) {
-                                tmp.set(j, (byte) (precisionDiff - (int) (Math.log(k) / Math.log(2))));
-                                value.skip(registersToMerge - k - 1);
+                                tmp.set(i, (byte) (precisionDiff - (int) (Math.log(j) / Math.log(2))));
+                                value.skip(registersToMerge - j - 1);
                                 break;
                             }
                         }
