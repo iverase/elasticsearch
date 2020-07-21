@@ -41,8 +41,6 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
     @Nullable
     private final ByteArray collectorArray;
 
-    private LeafBucketCollector collector;
-
     public HllBackedCardinalityAggregator(
             String name,
             ValuesSourceConfig valuesSourceConfig,
@@ -72,17 +70,16 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
 
     @Override
     public LeafBucketCollector getLeafCollector(LeafReaderContext ctx,
-            final LeafBucketCollector sub) throws IOException {
+                                               LeafBucketCollector sub) throws IOException {
         if (valuesSource == null) {
             return new EmptyCollector();
         }
         HllValuesSource.HllSketch source = (HllValuesSource.HllSketch) valuesSource;
         if (precision == fieldPrecision) {
-            collector = new EqualPrecisionHllCollector(counts, source.getHllValues(ctx), collectorArray);
+            return new EqualPrecisionHllCollector(counts, source.getHllValues(ctx), collectorArray);
         } else {
-            collector = new DifferentPrecisionHllCollector(counts, source.getHllValues(ctx), collectorArray, fieldPrecision);
+            return new DifferentPrecisionHllCollector(counts, source.getHllValues(ctx), collectorArray, fieldPrecision);
         }
-        return collector;
     }
 
     @Override
