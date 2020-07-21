@@ -34,7 +34,6 @@ import org.elasticsearch.index.mapper.FieldMapper;
 import org.elasticsearch.index.mapper.MappedFieldType;
 import org.elasticsearch.index.mapper.Mapper;
 import org.elasticsearch.index.mapper.MapperParsingException;
-import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.index.mapper.ParseContext;
 import org.elasticsearch.index.mapper.TextSearchInfo;
 import org.elasticsearch.index.mapper.TypeParsers;
@@ -127,8 +126,10 @@ public class HllFieldMapper extends FieldMapper {
 
         @Override
         public HllFieldMapper build(BuilderContext context) {
-            return new HllFieldMapper(name, fieldType, new CardinalityFieldType(buildFullName(context), hasDocValues, precision().value(), meta),
-                multiFieldsBuilder.build(this, context), ignoreMalformed(context), precision(), copyTo);
+            final CardinalityFieldType mappedFieldType
+                = new CardinalityFieldType(buildFullName(context), hasDocValues, precision().value(), meta);
+            return new HllFieldMapper(name, fieldType, mappedFieldType, multiFieldsBuilder.build(this, context),
+                ignoreMalformed(context), precision(), copyTo);
         }
     }
 

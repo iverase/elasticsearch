@@ -112,7 +112,8 @@ public class AnalyticsAggregatorFactory {
             (CardinalityAggregatorSupplier) (name, valuesSource, precision, context, parent, metadata) -> {
                 HllFieldMapper.CardinalityFieldType fieldType = (HllFieldMapper.CardinalityFieldType) valuesSource.fieldType();
                 if (fieldType.precision() >= precision) {
-                    return new HllBackedCardinalityAggregator(name, valuesSource, precision, fieldType.precision(), context, parent, metadata);
+                    return new HllBackedCardinalityAggregator(name, valuesSource, precision,
+                        fieldType.precision(), context, parent, metadata);
                 }
                 throw new IllegalArgumentException("Cardinality aggregation precision ["  + precision + "] " +
                     "is not compatible with field precision [" + fieldType.precision() + "]. Precision threshold must " +

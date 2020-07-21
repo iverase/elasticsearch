@@ -100,7 +100,8 @@ public class HllBackedCardinalityAggregatorTests extends AggregatorTestCase {
                     new CardinalityAggregationBuilder("test").field("field").precisionThreshold(192);
 
                 MappedFieldType fieldType = new HllFieldMapper.CardinalityFieldType("field", true, 10, Collections.emptyMap());
-                IllegalArgumentException ex = expectThrows(IllegalArgumentException.class, () -> createAggregator(builder, indexSearcher, fieldType));
+                IllegalArgumentException ex =
+                    expectThrows(IllegalArgumentException.class, () -> createAggregator(builder, indexSearcher, fieldType));
                 assertThat(ex.getMessage(),
                     Matchers.is("Cardinality aggregation precision [11] is not compatible with field precision [10]." +
                         " Precision threshold must be lower or equal than [191]"));
@@ -122,7 +123,8 @@ public class HllBackedCardinalityAggregatorTests extends AggregatorTestCase {
                 IndexSearcher indexSearcher = newSearcher(indexReader, true, true);
 
                 CardinalityAggregationBuilder builder =
-                        new CardinalityAggregationBuilder("test").field("field").precisionThreshold(HyperLogLogPlusPlus.thresholdFromPrecision(4));
+                        new CardinalityAggregationBuilder("test").field("field")
+                            .precisionThreshold(HyperLogLogPlusPlus.thresholdFromPrecision(4));
 
                 MappedFieldType fieldType = new HllFieldMapper.CardinalityFieldType("field", true, 4, Collections.emptyMap());
                 Aggregator aggregator = createAggregator(builder, indexSearcher, fieldType);
