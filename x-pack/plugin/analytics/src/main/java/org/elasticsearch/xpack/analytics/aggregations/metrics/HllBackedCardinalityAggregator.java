@@ -175,28 +175,32 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
             if (values.advanceExact(doc)) {
                 final HllValue value = values.hllValue();
                 for (int i = 0; i < m; i++) {
-                    value.next();
-                    final byte runLen = value.value();
-                    if (runLen != 0) {
-                        // If the first element is set, then runLen is this value plus the change in precision
-                        tmp.set(i, (byte) (runLen + precisionDiff));
-                        value.skip(registersToMerge - 1);
-                    } else {
-                        tmp.set(i, (byte) 0);
-                        // Find the first set value and compute the runLen for the precision change
-                        for (int j = 1; j < registersToMerge; j++) {
-                            value.next();
-                            if (value.value() != 0) {
-                                tmp.set(i, (byte) (precisionDiff - (int) (Math.log(j) / Math.log(2))));
-                                value.skip(registersToMerge - j - 1);
-                                break;
-                            }
-                        }
-                    }
+                    final byte runLen = mergeRegister(value);
+                    tmp.set(i, runLen);
                 }
                 assert value.next() == false;
                 counts.collectRunLens(bucketOrd, tmp);
             }
+        }
+
+        private byte mergeRegister(HllValue value) throws IOException {
+            value.next();
+            final byte runLen = value.value();
+            if (runLen != 0) {
+                // If the first element is set, then runLen is this value plus the change in precision
+                value.skip(registersToMerge - 1);
+                return (byte) (runLen + precisionDiff);
+            } else {
+                // Find the first set value and compute the runLen for the precision change
+                for (int i = 1; i < registersToMerge; i++) {
+                    value.next();
+                    if (value.value() != 0) {
+                        value.skip(registersToMerge - i - 1);
+                        return (byte) (precisionDiff - (int) (Math.log(i) / Math.log(2)));
+                    }
+                }
+            }
+            return 0;
         }
     }
 }
