@@ -6,18 +6,15 @@
 
 package org.elasticsearch.xpack.analytics.mapper.fielddata;
 
-import org.elasticsearch.index.Index;
 import org.elasticsearch.index.fielddata.IndexFieldData;
 import org.elasticsearch.search.aggregations.support.ValuesSourceType;
 
 public abstract class IndexHllFieldData implements IndexFieldData<LeafHllFieldData> {
 
-    protected final Index index;
     protected final String fieldName;
     protected final ValuesSourceType valuesSourceType;
 
-    public IndexHllFieldData(Index index, String fieldName, ValuesSourceType valuesSourceType) {
-        this.index = index;
+    public IndexHllFieldData(String fieldName, ValuesSourceType valuesSourceType) {
         this.fieldName = fieldName;
         this.valuesSourceType = valuesSourceType;
     }

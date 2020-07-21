@@ -217,8 +217,8 @@ public class HllFieldMapper extends FieldMapper {
         @Override
         public IndexFieldData.Builder fielddataBuilder(String fullyQualifiedIndexName) {
             failIfNoDocValues();
-            return (indexSettings, fieldType, cache, breakerService, mapperService) ->
-                new IndexHllFieldData(indexSettings.getIndex(), fieldType.name(), AnalyticsValuesSourceType.CARDINALITY) {
+            return (cache, breakerService, mapperService) ->
+                new IndexHllFieldData(name(), AnalyticsValuesSourceType.CARDINALITY) {
 
                 @Override
                 public LeafHllFieldData load(LeafReaderContext context) {
