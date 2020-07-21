@@ -8,20 +8,25 @@ package org.elasticsearch.xpack.analytics.mapper;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.compress.CompressedXContent;
+import org.elasticsearch.common.inject.matcher.Matcher;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.IndexService;
 import org.elasticsearch.index.mapper.DocumentMapper;
 import org.elasticsearch.index.mapper.FieldMapperTestCase;
+import org.elasticsearch.index.mapper.MappedFieldType;
 import org.elasticsearch.index.mapper.MapperParsingException;
+import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.index.mapper.MapperService.MergeReason;
 import org.elasticsearch.index.mapper.ParsedDocument;
 import org.elasticsearch.index.mapper.SourceToParse;
 import org.elasticsearch.plugins.Plugin;
 import org.elasticsearch.xpack.analytics.AnalyticsPlugin;
 import org.elasticsearch.xpack.core.LocalStateCompositeXPackPlugin;
+import org.hamcrest.Matchers;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -29,6 +34,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -47,7 +53,7 @@ public class HllFieldMapperTests extends FieldMapperTestCase<HllFieldMapper.Buil
         return Set.of("analyzer", "similarity", "doc_values", "store", "index");
     }
 
-    private static String getMapping(int precision, boolean ignoreMalformed) throws Exception {
+    private static String getMapping(int precision, boolean ignoreMalformed) throws IOException {
         XContentBuilder xContentBuilder = XContentFactory.jsonBuilder()
             .startObject()
               .startObject("_doc")
@@ -421,6 +427,47 @@ public class HllFieldMapperTests extends FieldMapperTestCase<HllFieldMapper.Buil
         mapper = indexService.mapperService().merge("_doc",
                 new CompressedXContent(mapping3), MergeReason.MAPPING_UPDATE);
         assertEquals(mapping3, mapper.mappingSource().toString());
+    }
+
+    public void testMergeField() throws IOException {
+        String initMapping = getMapping(4, false);
+        IndexService indexService = createIndex("test");
+
+        indexService.mapperService().merge("_doc", new CompressedXContent(initMapping),
+            MapperService.MergeReason.MAPPING_UPDATE);
+
+        MappedFieldType fieldType = indexService.mapperService().fieldType("pre_aggregated");
+        assertThat(fieldType, notNullValue());
+        assertThat(fieldType, Matchers.instanceOf(HllFieldMapper.HllFieldType.class));
+
+        assertThat(((HllFieldMapper.HllFieldType) fieldType).precision(), equalTo(4));
+        assertThat(((HllFieldMapper.HllFieldType) fieldType).ignoreMalformed(), equalTo(false));
+
+        String updateFormatMapping = getMapping(4, true);
+
+        indexService.mapperService().merge("_doc", new CompressedXContent(updateFormatMapping),
+            MapperService.MergeReason.MAPPING_UPDATE);
+        assertThat(indexService.mapperService().fieldType("pre_aggregated"), notNullValue());
+
+        fieldType = indexService.mapperService().fieldType("pre_aggregated");
+        assertThat(fieldType, notNullValue());
+        assertThat(fieldType, Matchers.instanceOf(HllFieldMapper.HllFieldType.class));
+
+        assertThat(((HllFieldMapper.HllFieldType) fieldType).precision(), equalTo(4));
+        assertThat(((HllFieldMapper.HllFieldType) fieldType).ignoreMalformed(), equalTo(true));
+
+        String invalidUpdateFormatMapping = getMapping(5, true);
+        Exception e = expectThrows(IllegalArgumentException.class,
+            () -> indexService.mapperService().merge("_doc", new CompressedXContent(invalidUpdateFormatMapping),
+                MapperService.MergeReason.MAPPING_UPDATE));
+        assertThat(e.getMessage(), containsString("mapper [pre_aggregated] has different [precision]"));
+
+        fieldType = indexService.mapperService().fieldType("pre_aggregated");
+        assertThat(fieldType, notNullValue());
+        assertThat(fieldType, Matchers.instanceOf(HllFieldMapper.HllFieldType.class));
+
+        assertThat(((HllFieldMapper.HllFieldType) fieldType).precision(), equalTo(4));
+        assertThat(((HllFieldMapper.HllFieldType) fieldType).ignoreMalformed(), equalTo(true));
     }
 
     @Override

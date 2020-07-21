@@ -99,7 +99,7 @@ public class HllBackedCardinalityAggregatorTests extends AggregatorTestCase {
                 CardinalityAggregationBuilder builder =
                     new CardinalityAggregationBuilder("test").field("field").precisionThreshold(192);
 
-                MappedFieldType fieldType = new HllFieldMapper.CardinalityFieldType("field", true, 10, Collections.emptyMap());
+                MappedFieldType fieldType = new HllFieldMapper.HllFieldType("field", true, 10, false, Collections.emptyMap());
                 IllegalArgumentException ex =
                     expectThrows(IllegalArgumentException.class, () -> createAggregator(builder, indexSearcher, fieldType));
                 assertThat(ex.getMessage(),
@@ -126,7 +126,7 @@ public class HllBackedCardinalityAggregatorTests extends AggregatorTestCase {
                         new CardinalityAggregationBuilder("test").field("field")
                             .precisionThreshold(HyperLogLogPlusPlus.thresholdFromPrecision(4));
 
-                MappedFieldType fieldType = new HllFieldMapper.CardinalityFieldType("field", true, 4, Collections.emptyMap());
+                MappedFieldType fieldType = new HllFieldMapper.HllFieldType("field", true, 4, false, Collections.emptyMap());
                 Aggregator aggregator = createAggregator(builder, indexSearcher, fieldType);
                 aggregator.preCollection();
                 indexSearcher.search(query, aggregator);

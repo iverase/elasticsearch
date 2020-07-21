@@ -110,7 +110,7 @@ public class AnalyticsAggregatorFactory {
         builder.register(CardinalityAggregationBuilder.NAME,
             AnalyticsValuesSourceType.CARDINALITY,
             (CardinalityAggregatorSupplier) (name, valuesSource, precision, context, parent, metadata) -> {
-                HllFieldMapper.CardinalityFieldType fieldType = (HllFieldMapper.CardinalityFieldType) valuesSource.fieldType();
+                HllFieldMapper.HllFieldType fieldType = (HllFieldMapper.HllFieldType) valuesSource.fieldType();
                 if (fieldType.precision() >= precision) {
                     return new HllBackedCardinalityAggregator(name, valuesSource, precision,
                         fieldType.precision(), context, parent, metadata);

@@ -126,10 +126,11 @@ public class HllFieldMapper extends FieldMapper {
 
         @Override
         public HllFieldMapper build(BuilderContext context) {
-            final CardinalityFieldType mappedFieldType
-                = new CardinalityFieldType(buildFullName(context), hasDocValues, precision().value(), meta);
+            Explicit<Boolean> ignoreMalformed = ignoreMalformed(context);
+            final HllFieldType mappedFieldType
+                = new HllFieldType(buildFullName(context), hasDocValues, precision().value(), ignoreMalformed.value(), meta);
             return new HllFieldMapper(name, fieldType, mappedFieldType, multiFieldsBuilder.build(this, context),
-                ignoreMalformed(context), precision(), copyTo);
+                ignoreMalformed, precision(), copyTo);
         }
     }
 
@@ -176,7 +177,9 @@ public class HllFieldMapper extends FieldMapper {
         if (gpfmMergeWith.ignoreMalformed.explicit()) {
             this.ignoreMalformed = gpfmMergeWith.ignoreMalformed;
         }
-        if (gpfmMergeWith.precision.explicit()) {
+        if (precision.value() != gpfmMergeWith.precision.value()) {
+            conflicts.add("mapper [" + name() + "] has different [precision]");
+        } else if (precision.explicit() == false && gpfmMergeWith.precision.explicit()) {
             this.precision = gpfmMergeWith.precision;
             this.m = 1 << precision.value();
         }
@@ -192,21 +195,23 @@ public class HllFieldMapper extends FieldMapper {
         throw new UnsupportedOperationException("Parsing is implemented in parse(), this method should NEVER be called");
     }
 
-    public static class CardinalityFieldType extends MappedFieldType {
+    public static class HllFieldType extends MappedFieldType {
 
-        private int precision;
+        private final int precision;
+        private final boolean ignoreMalformed;
 
-        public CardinalityFieldType(String name, boolean hasDocValues, int precision, Map<String, String> meta) {
+        public HllFieldType(String name, boolean hasDocValues, int precision, boolean ignoreMalformed, Map<String, String> meta) {
             super(name, false, hasDocValues, TextSearchInfo.SIMPLE_MATCH_ONLY, meta);
             this.precision = precision;
+            this.ignoreMalformed = ignoreMalformed;
         }
 
         public int precision() {
             return precision;
         }
 
-        public void setPrecision(int precision) {
-            this.precision = precision;
+        public boolean ignoreMalformed() {
+            return ignoreMalformed;
         }
 
         @Override
@@ -313,7 +318,7 @@ public class HllFieldMapper extends FieldMapper {
         @Override
         public boolean equals(Object o) {
             if (!super.equals(o)) return false;
-            CardinalityFieldType that = (CardinalityFieldType) o;
+            HllFieldType that = (HllFieldType) o;
             return precision == that.precision;
         }
 
