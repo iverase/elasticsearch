@@ -31,22 +31,12 @@ import org.elasticsearch.common.util.IntArray;
  *
  * The algorithm just keep a record of all distinct values provided encoded as an integer.
  */
-public abstract class AbstractLinearCounting  {
+public abstract class AbstractLinearCounting extends AbstractCardinalityAlgorithms {
 
-    public static final int MIN_PRECISION = 4;
-    public static final int MAX_PRECISION = 18;
     private static final int P2 = 25;
 
-    private final int p;
-
     public AbstractLinearCounting(int precision) {
-        if (precision < MIN_PRECISION) {
-            throw new IllegalArgumentException("precision must be >= 4");
-        }
-        if (precision > MAX_PRECISION) {
-            throw new IllegalArgumentException("precision must be <= 18");
-        }
-        p = precision;
+       super(precision);
     }
 
     /**
@@ -64,10 +54,6 @@ public abstract class AbstractLinearCounting  {
      * return the current values in the counter.
      */
     protected abstract IntArray values();
-
-    public int precision() {
-        return p;
-    }
 
     public int collect(long hash) {
         final int k = encodeHash(hash, p);

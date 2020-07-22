@@ -26,10 +26,8 @@ package org.elasticsearch.search.aggregations.metrics;
  *
  * Trying to understand what this class does without having read the paper is considered adventurous.
  */
-public abstract class AbstractHyperLogLog {
+public abstract class AbstractHyperLogLog extends AbstractCardinalityAlgorithms {
 
-    public static final int MIN_PRECISION = 4;
-    public static final int MAX_PRECISION = 18;
     private static final int P2 = 25;
     private static final int BIAS_K = 6;
 
@@ -719,17 +717,11 @@ public abstract class AbstractHyperLogLog {
         120000,
         350000 };
 
-    protected final int p, m;
+    protected final int m;
     private final double alphaMM;
 
     public AbstractHyperLogLog(int precision) {
-        if (precision < MIN_PRECISION) {
-            throw new IllegalArgumentException("precision must be >= 4");
-        }
-        if (precision > MAX_PRECISION) {
-            throw new IllegalArgumentException("precision must be <= 18");
-        }
-        p = precision;
+        super(precision);
         m = 1 << p;
         final double alpha;
         switch (p) {
@@ -746,10 +738,6 @@ public abstract class AbstractHyperLogLog {
         alphaMM = alpha * m * m;
     }
 
-    public int precision() {
-        return p;
-    }
-
     /** Add a new runLen to the register. Implementor should only keep the value if it is
      * bigger that the current value of the register provided. */
     protected abstract void addRunLen(int register, int runLen);
@@ -757,29 +745,13 @@ public abstract class AbstractHyperLogLog {
     /** Returns an iterator over all values of the register. */
     protected abstract RunLenIterator getRunLens();
 
-    public void merge(AbstractHyperLogLog other) {
-        if (p != other.p) {
-            throw new IllegalArgumentException();
-        }
-        RunLenIterator iterator = other.getRunLens();
-        for (int i = 0; i < m; ++i) {
-            iterator.next();
-            addRunLen(i, iterator.value());
-        }
-    }
-
     public void collect(long hash) {
         final int index = Math.toIntExact(index(hash, p));
         final int runLen = runLen(hash, p);
         addRunLen(index, runLen);
     }
 
-    public void collectEncoded(int encoded) {
-        final int runLen = decodeRunLen(encoded, p);
-        final int index = decodeIndex(encoded, p);
-        addRunLen(index, runLen);
-    }
-
+    @Override
     public long cardinality() {
         double inverseSum = 0;
         int zeros = 0;
@@ -803,6 +775,23 @@ public abstract class AbstractHyperLogLog {
             return h;
         } else {
             return Math.round(e2);
+        }
+    }
+
+    public void collectEncoded(int encoded) {
+        final int runLen = decodeRunLen(encoded, p);
+        final int index = decodeIndex(encoded, p);
+        addRunLen(index, runLen);
+    }
+
+    public void merge(AbstractHyperLogLog other) {
+        if (p != other.p) {
+            throw new IllegalArgumentException();
+        }
+        RunLenIterator iterator = other.getRunLens();
+        for (int i = 0; i < m; ++i) {
+            iterator.next();
+            addRunLen(i, iterator.value());
         }
     }
 

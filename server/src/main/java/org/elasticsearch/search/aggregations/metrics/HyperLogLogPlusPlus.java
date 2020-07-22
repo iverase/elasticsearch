@@ -252,7 +252,7 @@ public final class HyperLogLogPlusPlus implements Releasable {
         // before calling any of the methods.
         protected long bucket;
 
-        public HyperLogLog(BigArrays bigArrays, long initialBucketCount, int precision) {
+        HyperLogLog(BigArrays bigArrays, long initialBucketCount, int precision) {
             super(precision);
             this.runLens =  bigArrays.newByteArray(initialBucketCount << precision);
             this.bigArrays = bigArrays;
@@ -345,13 +345,13 @@ public final class HyperLogLogPlusPlus implements Releasable {
         private final BigArrays bigArrays;
         // We are actually using HyperLogLog's runLens array but interpreting it as a hash set for linear counting.
         private final HyperLogLog hll;
-        // number of elements stored.
+        // Number of elements stored.
         private IntArray sizes;
         // Defines the position of the data structure. Callers of this object should set this value
         // before calling any of the methods.
         protected long bucket;
 
-        public LinearCounting(BigArrays bigArrays, long initialBucketCount, int p, HyperLogLog hll) {
+        LinearCounting(BigArrays bigArrays, long initialBucketCount, int p, HyperLogLog hll) {
             super(p);
             this.bigArrays = bigArrays;
             this.hll = hll;
