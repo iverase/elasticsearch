@@ -54,7 +54,7 @@ import java.util.Set;
  * data structure are processed using the linear counting until a threshold defined by the precision is reached where the data is replayed
  * to the HyperLogLog algorithm and then this is used.
  *
- * It supports storing several data structures which are identified by a bucket number.
+ * It supports storing several HyperLogLogPlusPlus structures which are identified by a bucket number.
  */
 public final class HyperLogLogPlusPlus implements Releasable {
 
