@@ -28,6 +28,8 @@ import org.elasticsearch.common.util.IntArray;
  * https://docs.google.com/document/d/1gyjfMHy43U9OWBXxfaeG-3MjGzejW1dlpyMwEYAAWEI/view?fullscreen
  *
  * Trying to understand what this class does without having read the paper is considered adventurous.
+ *
+ * The algorithm just keep a record of all distinct values provided encoded as an integer.
  */
 public abstract class AbstractLinearCounting  {
 
@@ -47,10 +49,20 @@ public abstract class AbstractLinearCounting  {
         p = precision;
     }
 
+    /**
+     * Add encoded value to the linear counting. Implementor should only accept the value if it has not been
+     * seen before.
+     */
     protected abstract int addEncoded(int encoded);
 
+    /**
+     * number of values in the counter.
+     */
     protected abstract int size();
 
+    /**
+     * return the current values in the counter.
+     */
     protected abstract IntArray values();
 
     public int precision() {

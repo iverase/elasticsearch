@@ -49,6 +49,12 @@ import java.util.Set;
  * counting. Although this requires more space and makes hyperloglog (which is less accurate) used sooner, this is also considerably faster.
  *
  * Trying to understand what this class does without having read the paper is considered adventurous.
+ *
+ * The HyperLogLogPlusPlus contains two algorithms, one for linear counting and the HyperLogLog algorithm. Initially hashes added to the
+ * data structure are processed using the linear counting until a threshold defined by the precision is reached where the data is replayed
+ * to the HyperLogLog algorithm and then this is used.
+ *
+ * It supports storing several data structures which are identified by a bucket number.
  */
 public final class HyperLogLogPlusPlus implements Releasable {
 
@@ -240,8 +246,10 @@ public final class HyperLogLogPlusPlus implements Releasable {
     private static class HyperLogLog extends AbstractHyperLogLog implements Releasable {
         private final BigArrays bigArrays;
         private final RunLenBucketIterator iterator;
-
+        // array for holding the runlens.
         private ByteArray runLens;
+        // Defines the position of the data structure. Callers of this object should set this value
+        // before calling any of the methods.
         protected long bucket;
 
         public HyperLogLog(BigArrays bigArrays, long initialBucketCount, int precision) {
@@ -335,14 +343,18 @@ public final class HyperLogLogPlusPlus implements Releasable {
         private final ByteBuffer writeSpare;
         private final int p;
         private final BigArrays bigArrays;
+        // We are actually using HyperLogLog's runLens array but interpreting it as a hash set for linear counting.
         private final HyperLogLog hll;
+        // number of elements stored.
         private IntArray sizes;
+        // Defines the position of the data structure. Callers of this object should set this value
+        // before calling any of the methods.
         protected long bucket;
 
         public LinearCounting(BigArrays bigArrays, long initialBucketCount, int p, HyperLogLog hll) {
             super(p);
             this.bigArrays = bigArrays;
-            this.hll = hll; // reuse runLens from HyperLogLog for intermediate steps
+            this.hll = hll;
             capacity = (1 << p) / 4; // because ints take 4 bytes
             this.p = p;
             threshold = (int) (capacity * MAX_LOAD_FACTOR);

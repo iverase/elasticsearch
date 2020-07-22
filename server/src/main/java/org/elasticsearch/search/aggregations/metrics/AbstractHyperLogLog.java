@@ -750,8 +750,11 @@ public abstract class AbstractHyperLogLog {
         return p;
     }
 
+    /** Add a new runLen to the register. Implementor should only keep the value if it is
+     * bigger that the current value of the register provided. */
     protected abstract void addRunLen(int register, int runLen);
 
+    /** Returns an iterator over all values of the register. */
     protected abstract RunLenIterator getRunLens();
 
     public void merge(AbstractHyperLogLog other) {
@@ -876,10 +879,18 @@ public abstract class AbstractHyperLogLog {
         return THRESHOLDS[p - 4];
     }
 
+    /** Iterator over a HyperLogLog register */
     public interface RunLenIterator {
-
+        /**
+         * Moves the iterator to the next element if it exists.
+         * @return true if there is a next register, else false.
+         */
         boolean next();
 
+        /**
+         * Value of the register.
+         * @return the current value of the register.
+         */
         byte value();
 
     }
