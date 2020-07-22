@@ -108,7 +108,10 @@ public final class HyperLogLogPlusPlus implements Releasable {
                 for (long i = 0; i < values.size(); ++i) {
                     final int encoded = values.get(i);
                     if (algorithm.get(thisBucket) == LINEAR_COUNTING) {
-                        lc.addEncoded(encoded);
+                        final int newSize = lc.addEncoded(encoded);
+                        if (newSize > lc.threshold) {
+                            upgradeToHll(thisBucket);
+                        }
                     } else {
                         hll.collectEncoded(encoded);
                     }
@@ -129,8 +132,8 @@ public final class HyperLogLogPlusPlus implements Releasable {
         hll.ensureCapacity(bucket + 1);
         if (algorithm.get(bucket) == LINEAR_COUNTING) {
             lc.bucket = bucket;
-            lc.collect(hash);
-            if (lc.size() > lc.threshold) {
+            final int newSize = lc.collect(hash);
+            if (newSize > lc.threshold) {
                 upgradeToHll(bucket);
             }
         } else {
@@ -350,7 +353,7 @@ public final class HyperLogLogPlusPlus implements Releasable {
         }
 
         @Override
-        protected void addEncoded(int encoded) {
+        protected int addEncoded(int encoded) {
             sizes = bigArrays.grow(sizes, bucket + 1);
             assert encoded != 0;
             for (int i = (encoded & mask);; i = (i + 1) & mask) {
@@ -358,11 +361,10 @@ public final class HyperLogLogPlusPlus implements Releasable {
                 if (v == 0) {
                     // means unused, take it!
                     set(i, encoded);
-                    sizes.increment(bucket, 1);
-                    break;
+                    return sizes.increment(bucket, 1);
                 } else if (v == encoded) {
                     // k is already in the set
-                    break;
+                    return -1;
                 }
             }
         }

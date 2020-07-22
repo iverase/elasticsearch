@@ -47,7 +47,7 @@ public abstract class AbstractLinearCounting  {
         p = precision;
     }
 
-    protected abstract void addEncoded(int encoded);
+    protected abstract int addEncoded(int encoded);
 
     protected abstract int size();
 
@@ -57,9 +57,9 @@ public abstract class AbstractLinearCounting  {
         return p;
     }
 
-    public void collect(long hash) {
+    public int collect(long hash) {
         final int k = encodeHash(hash, p);
-        addEncoded(k);
+        return addEncoded(k);
     }
 
     public long cardinality() {
