@@ -53,6 +53,7 @@ public class HllBackedCardinalityAggregatorTests extends AggregatorTestCase {
 
     private BinaryDocValuesField getDocValue(String fieldName,int[] runLens) throws IOException {
         BytesStreamOutput streamOutput = new BytesStreamOutput();
+        streamOutput.writeByte((byte) 0);
         for (int i = 0; i < runLens.length; i++) {
             streamOutput.writeByte((byte) runLens[i]);
         }

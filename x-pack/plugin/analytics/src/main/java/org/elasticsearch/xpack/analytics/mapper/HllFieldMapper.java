@@ -227,12 +227,15 @@ public class HllFieldMapper extends FieldMapper {
 
                 @Override
                 public LeafHllFieldData load(LeafReaderContext context) {
+
                     return new LeafHllFieldData() {
                         @Override
                         public HllValues getHllValues() throws IOException {
                             try {
                                 final BinaryDocValues values = DocValues.getBinary(context.reader(), fieldName);
-                                final InternalHllValue value = new InternalHllValue();
+                                final ByteArrayDataInput dataInput = new ByteArrayDataInput();
+                                final InternalFixedLengthHllValue fixedValue = new InternalFixedLengthHllValue();
+                                final InternalRunLenHllValue runLenValue = new InternalRunLenHllValue();
                                 return new HllValues() {
 
                                     @Override
@@ -243,8 +246,16 @@ public class HllFieldMapper extends FieldMapper {
                                     @Override
                                     public HllValue hllValue() throws IOException {
                                         try {
-                                            value.reset(values.binaryValue());
-                                            return value;
+                                            BytesRef bytesRef = values.binaryValue();
+                                            dataInput.reset(bytesRef.bytes, bytesRef.offset, bytesRef.length);
+                                            byte mode = dataInput.readByte();
+                                            if (mode == 0) {
+                                                fixedValue.reset(dataInput);
+                                                return fixedValue;
+                                            } else {
+                                                runLenValue.reset(dataInput);
+                                                return runLenValue;
+                                            }
                                         } catch (IOException e) {
                                             throw new IOException("Cannot load doc value", e);
                                         }
@@ -389,9 +400,17 @@ public class HllFieldMapper extends FieldMapper {
             }
             if (fieldType().hasDocValues()) {
                 ByteBuffersDataOutput dataOutput = new ByteBuffersDataOutput();
-                for (int i = 0; i < m; i++) {
-                    dataOutput.writeByte(runLens.get(i));
+                int runLenLength = runLenLength(runLens);
+                if (runLenLength <= m) {
+                    dataOutput.writeByte((byte) 0);
+                    for (int i = 0; i < m; i++) {
+                        dataOutput.writeByte(runLens.get(i));
+                    }
+                } else {
+                    dataOutput.writeByte((byte) 1);
+                    writeRunLen(runLens, dataOutput);
                 }
+
                 BytesRef docValue = new BytesRef(dataOutput.toArrayCopy(), 0, Math.toIntExact(dataOutput.size()));
                 Field field = new BinaryDocValuesField(name(), docValue);
                 if (context.doc().getByKey(fieldType().name()) != null) {
@@ -416,6 +435,39 @@ public class HllFieldMapper extends FieldMapper {
         context.path().remove();
     }
 
+    private int runLenLength(ByteArrayList runLen) {
+        int length = 2;
+        byte value = runLen.get(0);
+        for (int i = 1; i < runLen.size(); i++) {
+            byte nextValue = runLen.get(i);
+            if (nextValue != value) {
+                length += 2;
+                value = nextValue;
+            } else {
+                length++;
+            }
+        }
+        return length;
+    }
+
+    private void writeRunLen(ByteArrayList runLen, ByteBuffersDataOutput dataOutput) throws IOException {
+        int length = 1;
+        byte value = runLen.get(0);
+        for (int i = 1; i < runLen.size(); i++) {
+            byte nextValue = runLen.get(i);
+            if (nextValue != value) {
+                dataOutput.writeVInt(length);
+                dataOutput.writeByte(value);
+                length = 1;
+                value = nextValue;
+            } else {
+                length++;
+            }
+        }
+        dataOutput.writeVInt(length);
+        dataOutput.writeByte(value);
+    }
+
     @Override
     protected void doXContentBody(XContentBuilder builder, boolean includeDefaults, Params params) throws IOException {
         super.doXContentBody(builder, includeDefaults, params);
@@ -433,18 +485,17 @@ public class HllFieldMapper extends FieldMapper {
     }
 
     /** re-usable {@link HllValue} implementation */
-    private static class InternalHllValue extends HllValue {
-        byte value;
-        boolean isExhausted;
-        ByteArrayDataInput dataInput;
+    private static class InternalFixedLengthHllValue extends HllValue {
+        private byte value;
+        private boolean isExhausted;
+        private ByteArrayDataInput dataInput;
 
-        InternalHllValue() {
-            dataInput = new ByteArrayDataInput();
+        InternalFixedLengthHllValue() {
         }
 
         /** reset the value for the HLL sketch */
-        void reset(BytesRef bytesRef) {
-            dataInput.reset(bytesRef.bytes, bytesRef.offset, bytesRef.length);
+        void reset(ByteArrayDataInput dataInput) {
+            this.dataInput = dataInput;
             isExhausted = false;
             value = 0;
         }
@@ -470,6 +521,61 @@ public class HllFieldMapper extends FieldMapper {
         @Override
         public void skip(int bytes) {
             dataInput.skipBytes(bytes);
+        }
+    }
+
+    /** re-usable {@link HllValue} implementation */
+    private static class InternalRunLenHllValue extends HllValue {
+        private byte value;
+        private boolean isExhausted;
+        private ByteArrayDataInput dataInput;
+        private int valuesInBuffer;
+
+        InternalRunLenHllValue() {
+            dataInput = new ByteArrayDataInput();
+        }
+
+        /** reset the value for the HLL sketch */
+        void reset(ByteArrayDataInput dataInput) {
+            this.dataInput = dataInput;
+            isExhausted = false;
+            value = 0;
+            valuesInBuffer = 0;
+        }
+
+        @Override
+        public boolean next() {
+            if (valuesInBuffer > 0) {
+                valuesInBuffer--;
+                return true;
+            }
+            if (dataInput.eof() == false) {
+                valuesInBuffer = dataInput.readVInt() - 1;
+                value = dataInput.readByte();
+                return true;
+            }
+            isExhausted = true;
+            return false;
+        }
+
+        @Override
+        public byte value() {
+            if (isExhausted) {
+                throw new IllegalArgumentException("HyperLogLog sketch already exhausted");
+            }
+            return value;
+        }
+
+        @Override
+        public void skip(int bytes) {
+            if (valuesInBuffer >= bytes) {
+                valuesInBuffer -= bytes;
+            } else {
+                int valuesLeft = valuesInBuffer;
+                valuesInBuffer = 0;
+                next();
+                skip(bytes - valuesLeft - 1);
+            }
         }
     }
 }
