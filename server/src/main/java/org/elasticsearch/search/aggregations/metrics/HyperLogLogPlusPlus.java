@@ -238,10 +238,11 @@ public final class HyperLogLogPlusPlus implements Releasable {
     }
 
     private static class HyperLogLog extends AbstractHyperLogLog implements Releasable {
-        private ByteArray runLens;
-        protected long bucket;
         private final BigArrays bigArrays;
         private final RunLenBucketIterator iterator;
+
+        private ByteArray runLens;
+        protected long bucket;
 
         public HyperLogLog(BigArrays bigArrays, long initialBucketCount, int precision) {
             super(precision);
@@ -292,10 +293,10 @@ public final class HyperLogLogPlusPlus implements Releasable {
 
     private static class RunLenBucketIterator implements AbstractHyperLogLog.RunLenIterator {
 
-        int pos;
-        long start;
         private final HyperLogLog hll;
         private final int m, p;
+        int pos;
+        long start;
         private byte value;
 
         RunLenBucketIterator(HyperLogLog hll, int p, int m) {
@@ -327,17 +328,16 @@ public final class HyperLogLogPlusPlus implements Releasable {
 
     private static class LinearCounting extends AbstractLinearCounting implements Releasable {
 
-        protected long bucket;
-        protected int size;
         private final int capacity;
         protected final int threshold;
         private final int mask;
-        private IntArray sizes;
         private final BytesRef readSpare;
         private final ByteBuffer writeSpare;
         private final int p;
         private final BigArrays bigArrays;
-        private HyperLogLog hll;
+        private final HyperLogLog hll;
+        private IntArray sizes;
+        protected long bucket;
 
         public LinearCounting(BigArrays bigArrays, long initialBucketCount, int p, HyperLogLog hll) {
             super(p);
