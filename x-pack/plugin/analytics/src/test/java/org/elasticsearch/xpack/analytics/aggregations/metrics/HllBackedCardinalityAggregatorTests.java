@@ -47,7 +47,7 @@ public class HllBackedCardinalityAggregatorTests extends AggregatorTestCase {
     @Override
     protected AggregationBuilder createAggBuilderForTypeTest(MappedFieldType fieldType, String fieldName) {
         return new CardinalityAggregationBuilder("cardinality")
-            .field(fieldName).precisionThreshold(MultiHyperLogLog.thresholdFromPrecision(4));
+            .field(fieldName).precisionThreshold(HyperLogLog.thresholdFromPrecision(4));
     }
 
     private BinaryDocValuesField getDocValue(String fieldName,int[] runLens) throws IOException {
@@ -124,7 +124,7 @@ public class HllBackedCardinalityAggregatorTests extends AggregatorTestCase {
 
                 CardinalityAggregationBuilder builder =
                         new CardinalityAggregationBuilder("test").field("field")
-                            .precisionThreshold(MultiHyperLogLog.thresholdFromPrecision(4));
+                            .precisionThreshold(HyperLogLog.thresholdFromPrecision(4));
 
                 MappedFieldType fieldType = new HllFieldMapper.HllFieldType("field", true, 4, false, Collections.emptyMap());
                 Aggregator aggregator = createAggregator(builder, indexSearcher, fieldType);

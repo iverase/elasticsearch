@@ -19,31 +19,18 @@
 
 package org.elasticsearch.xpack.analytics.aggregations.metrics;
 
-import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.LongBitSet;
-import org.apache.lucene.util.packed.PackedInts;
-import org.elasticsearch.common.io.stream.StreamInput;
-import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.lease.Releasable;
 import org.elasticsearch.common.lease.Releasables;
 import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.ByteArray;
-import org.elasticsearch.common.util.ByteUtils;
-import org.elasticsearch.common.util.IntArray;
 import org.elasticsearch.search.aggregations.metrics.AbstractHyperLogLog;
-import org.elasticsearch.search.aggregations.metrics.AbstractLinearCounting;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 /**
- * Hyperloglog++ counter, implemented based on pseudo code from
+ * Hyperloglog counter, implemented based on pseudo code from
  * http://static.googleusercontent.com/media/research.google.com/fr//pubs/archive/40671.pdf and its appendix
  * https://docs.google.com/document/d/1gyjfMHy43U9OWBXxfaeG-3MjGzejW1dlpyMwEYAAWEI/view?fullscreen
  *
@@ -52,13 +39,9 @@ import java.util.Set;
  *
  * Trying to understand what this class does without having read the paper is considered adventurous.
  *
- * The HyperLogLogPlusPlus contains two algorithms, one for linear counting and the HyperLogLog algorithm. Initially hashes added to the
- * data structure are processed using the linear counting until a threshold defined by the precision is reached where the data is replayed
- * to the HyperLogLog algorithm and then this is used.
- *
- * It supports storing several HyperLogLogPlusPlus structures which are identified by a bucket number.
+ * It supports storing several HyperLogLog structures which are identified by a bucket number.
  */
-public final class MultiHyperLogLog implements Releasable {
+public final class HyperLogLog implements Releasable {
 
     private static final long[] HLLPRECISIONTOTHRESHOLDS = new long[] {
         2,
@@ -90,10 +73,10 @@ public final class MultiHyperLogLog implements Releasable {
         return HLLPRECISIONTOTHRESHOLDS[precision - 4];
     }
 
-    private final HyperLogLog hll;
+    private final SingletonHyperLogLog hll;
 
-    public MultiHyperLogLog(int precision, BigArrays bigArrays, long initialBucketCount) {
-        hll = new HyperLogLog(bigArrays, initialBucketCount, precision);
+    public HyperLogLog(int precision, BigArrays bigArrays, long initialBucketCount) {
+        hll = new SingletonHyperLogLog(bigArrays, initialBucketCount, precision);
     }
 
     public int precision() {
@@ -143,12 +126,12 @@ public final class MultiHyperLogLog implements Releasable {
         return Objects.hash(precision(), getComparableData(bucket));
     }
 
-    public boolean equals(long bucket, MultiHyperLogLog other) {
+    public boolean equals(long bucket, HyperLogLog other) {
         return Objects.equals(precision(), other.precision())
             && Objects.equals(getComparableData(bucket), other.getComparableData(bucket));
     }
 
-    private static class HyperLogLog extends AbstractHyperLogLog implements Releasable {
+    private static class SingletonHyperLogLog extends AbstractHyperLogLog implements Releasable {
         private final BigArrays bigArrays;
         private final HyperLogLogIterator iterator;
         // array for holding the runlens.
@@ -157,7 +140,7 @@ public final class MultiHyperLogLog implements Releasable {
         // before calling any of the methods.
         protected long bucket;
 
-        HyperLogLog(BigArrays bigArrays, long initialBucketCount, int precision) {
+        SingletonHyperLogLog(BigArrays bigArrays, long initialBucketCount, int precision) {
             super(precision);
             this.runLens =  bigArrays.newByteArray(initialBucketCount << precision);
             this.bigArrays = bigArrays;
@@ -202,13 +185,13 @@ public final class MultiHyperLogLog implements Releasable {
 
     private static class HyperLogLogIterator implements AbstractHyperLogLog.RunLenIterator {
 
-        private final HyperLogLog hll;
+        private final SingletonHyperLogLog hll;
         private final int m, p;
         int pos;
         long start;
         private byte value;
 
-        HyperLogLogIterator(HyperLogLog hll, int p, int m) {
+        HyperLogLogIterator(SingletonHyperLogLog hll, int p, int m) {
             this.hll = hll;
             this.m = m;
             this.p = p;
@@ -234,5 +217,4 @@ public final class MultiHyperLogLog implements Releasable {
             return value;
         }
     }
-
 }

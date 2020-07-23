@@ -110,7 +110,7 @@ public class HllBackedCardinalityAggregationTests extends ESSingleNodeTestCase {
 
         CardinalityAggregationBuilder builder =
             AggregationBuilders.cardinality("agg").field("data")
-                .precisionThreshold(MultiHyperLogLog.thresholdFromPrecision(aggPrecision));
+                .precisionThreshold(HyperLogLog.thresholdFromPrecision(aggPrecision));
 
         SearchResponse responseRaw = client().prepareSearch("raw").addAggregation(builder).get();
         SearchResponse responsePreAgg = client().prepareSearch("pre_agg").addAggregation(builder).get();
@@ -214,7 +214,7 @@ public class HllBackedCardinalityAggregationTests extends ESSingleNodeTestCase {
 
         CardinalityAggregationBuilder builder =
             AggregationBuilders.cardinality("agg").field("parent.data")
-                .precisionThreshold(MultiHyperLogLog.thresholdFromPrecision(aggPrecision));
+                .precisionThreshold(HyperLogLog.thresholdFromPrecision(aggPrecision));
 
         SearchResponse responseRaw = client().prepareSearch("raw").addAggregation(builder).get();
         SearchResponse responsePreAgg = client().prepareSearch("pre_agg").addAggregation(builder).get();

@@ -36,7 +36,7 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
     private final int fieldPrecision;
     private final ValuesSource valuesSource;
     @Nullable
-    private final MultiHyperLogLog counts;
+    private final HyperLogLog counts;
 
     public HllBackedCardinalityAggregator(
             String name,
@@ -54,7 +54,7 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
         if (valuesSource == null) {
             this.counts = null;
         } else {
-            this.counts = new MultiHyperLogLog(precision, context.bigArrays(), 1);
+            this.counts = new HyperLogLog(precision, context.bigArrays(), 1);
         }
     }
 
@@ -108,9 +108,9 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
     private static class EqualPrecisionHllCollector extends LeafBucketCollector {
 
         private final HllValues values;
-        private final MultiHyperLogLog counts;
+        private final HyperLogLog counts;
 
-        EqualPrecisionHllCollector(MultiHyperLogLog counts, HllValues values) {
+        EqualPrecisionHllCollector(HyperLogLog counts, HllValues values) {
             this.counts = counts;
             this.values = values;
         }
@@ -127,12 +127,12 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
     private static class DifferentPrecisionHllCollector extends LeafBucketCollector {
 
         private final HllValues values;
-        private final MultiHyperLogLog counts;
+        private final HyperLogLog counts;
         private final int m;
         private final int precisionDiff;
         private final int registersToMerge;
 
-        DifferentPrecisionHllCollector(MultiHyperLogLog counts,
+        DifferentPrecisionHllCollector(HyperLogLog counts,
                                        HllValues values,
                                        int fieldPrecision) {
             this.counts = counts;
