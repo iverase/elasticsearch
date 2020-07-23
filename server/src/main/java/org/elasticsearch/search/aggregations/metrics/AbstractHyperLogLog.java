@@ -26,7 +26,7 @@ package org.elasticsearch.search.aggregations.metrics;
  *
  * Trying to understand what this class does without having read the paper is considered adventurous.
  */
-public abstract class AbstractHyperLogLog extends AbstractCardinalityAlgorithms {
+public abstract class AbstractHyperLogLog extends AbstractCardinalityAlgorithm {
 
     private static final int P2 = 25;
     private static final int BIAS_K = 6;
@@ -795,10 +795,6 @@ public abstract class AbstractHyperLogLog extends AbstractCardinalityAlgorithms 
         }
     }
 
-    static long linearCounting(long m, long v) {
-        return Math.round(m * Math.log((double) m / v));
-    }
-
     static long index(long hash, int p) {
         return hash >>> (64 - p);
     }
@@ -881,6 +877,5 @@ public abstract class AbstractHyperLogLog extends AbstractCardinalityAlgorithms 
          * @return the current value of the register.
          */
         byte value();
-
     }
 }

@@ -22,14 +22,14 @@ package org.elasticsearch.search.aggregations.metrics;
 /**
  * Base class for cardinality related algorithms.
  */
-abstract class AbstractCardinalityAlgorithms {
+abstract class AbstractCardinalityAlgorithm {
 
     public static final int MIN_PRECISION = 4;
     public static final int MAX_PRECISION = 18;
 
     protected final int p;
 
-    AbstractCardinalityAlgorithms(int precision) {
+    AbstractCardinalityAlgorithm(int precision) {
         if (precision < MIN_PRECISION) {
             throw new IllegalArgumentException("precision must be >= 4");
         }
@@ -46,4 +46,8 @@ abstract class AbstractCardinalityAlgorithms {
 
     /** Returns the current computed cardinality */
     public abstract long cardinality();
+
+    static long linearCounting(long m, long v) {
+        return Math.round(m * Math.log((double) m / v));
+    }
 }

@@ -20,7 +20,6 @@
 package org.elasticsearch.search.aggregations.metrics;
 
 import org.apache.lucene.util.packed.PackedInts;
-import org.elasticsearch.common.util.IntArray;
 
 /**
  * Linear counter, implemented based on pseudo code from
@@ -31,7 +30,7 @@ import org.elasticsearch.common.util.IntArray;
  *
  * The algorithm just keep a record of all distinct values provided encoded as an integer.
  */
-public abstract class AbstractLinearCounting extends AbstractCardinalityAlgorithms {
+public abstract class AbstractLinearCounting extends AbstractCardinalityAlgorithm {
 
     private static final int P2 = 25;
 
@@ -53,7 +52,7 @@ public abstract class AbstractLinearCounting extends AbstractCardinalityAlgorith
     /**
      * return the current values in the counter.
      */
-    protected abstract IntArray values();
+    protected abstract HashesIterator values();
 
     public int collect(long hash) {
         final int k = encodeHash(hash, p);
@@ -64,11 +63,6 @@ public abstract class AbstractLinearCounting extends AbstractCardinalityAlgorith
         final long m = 1 << P2;
         final long v = m - size();
         return linearCounting(m, v);
-    }
-
-
-    static long linearCounting(long m, long v) {
-        return Math.round(m * Math.log((double) m / v));
     }
 
     static long mask(int bits) {
@@ -90,5 +84,25 @@ public abstract class AbstractLinearCounting extends AbstractCardinalityAlgorith
         assert PackedInts.bitsRequired(encoded) <= 32;
         assert encoded != 0;
         return (int) encoded;
+    }
+
+    /** Iterator over the hash values */
+    public interface HashesIterator {
+
+        /**
+         * number of elements in the iterator
+         */
+        long size();
+        /**
+         * Moves the iterator to the next element if it exists.
+         * @return true if there is a next value, else false.
+         */
+        boolean next();
+
+        /**
+         * Hash value.
+         * @return the current value of the counter.
+         */
+        int value();
     }
 }
