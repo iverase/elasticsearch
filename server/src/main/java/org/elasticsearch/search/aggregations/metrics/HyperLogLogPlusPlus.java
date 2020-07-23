@@ -104,27 +104,30 @@ public final class HyperLogLogPlusPlus implements Releasable {
         if (precision() != other.precision()) {
             throw new IllegalArgumentException();
         }
-
         hll.ensureCapacity(thisBucket + 1);
         if (other.algorithm.get(otherBucket) == LINEAR_COUNTING) {
-            hll.bucket = thisBucket;
-            lc.bucket = thisBucket;
             other.lc.bucket = otherBucket;
-            final AbstractLinearCounting.HashesIterator values = other.lc.values();
-            while (values.next()) {
-                final int encoded = values.value();
-                if (algorithm.get(thisBucket) == LINEAR_COUNTING) {
-                    final int newSize = lc.addEncoded(encoded);
-                    if (newSize > lc.threshold) {
-                        upgradeToHll(thisBucket);
-                    }
-                } else {
-                    hll.collectEncoded(encoded);
-                }
-            }
+            merge(thisBucket, other.lc);
         } else {
             other.hll.bucket = otherBucket;
             merge(thisBucket, other.hll);
+        }
+    }
+
+    public void merge(long bucket, AbstractLinearCounting other) {
+        hll.bucket = bucket;
+        lc.bucket = bucket;
+        final AbstractLinearCounting.HashesIterator values = other.values();
+        while (values.next()) {
+            final int encoded = values.value();
+            if (algorithm.get(bucket) == LINEAR_COUNTING) {
+                final int newSize = lc.addEncoded(encoded);
+                if (newSize > lc.threshold) {
+                    upgradeToHll(bucket);
+                }
+            } else {
+                hll.collectEncoded(encoded);
+            }
         }
     }
 
