@@ -10,7 +10,6 @@ import org.elasticsearch.search.aggregations.bucket.histogram.HistogramAggregato
 import org.elasticsearch.search.aggregations.metrics.AvgAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.CardinalityAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.CardinalityAggregatorSupplier;
-import org.elasticsearch.search.aggregations.metrics.HyperLogLogPlusPlus;
 import org.elasticsearch.search.aggregations.metrics.MetricAggregatorSupplier;
 import org.elasticsearch.search.aggregations.metrics.PercentileRanksAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.PercentilesAggregationBuilder;
@@ -29,6 +28,7 @@ import org.elasticsearch.xpack.analytics.aggregations.metrics.HistoBackedSumAggr
 import org.elasticsearch.xpack.analytics.aggregations.metrics.HistoBackedTDigestPercentileRanksAggregator;
 import org.elasticsearch.xpack.analytics.aggregations.metrics.HistoBackedTDigestPercentilesAggregator;
 import org.elasticsearch.xpack.analytics.aggregations.metrics.HistoBackedValueCountAggregator;
+import org.elasticsearch.xpack.analytics.aggregations.metrics.MultiHyperLogLog;
 import org.elasticsearch.xpack.analytics.aggregations.support.AnalyticsValuesSourceType;
 import org.elasticsearch.xpack.analytics.mapper.HllFieldMapper;
 
@@ -117,7 +117,7 @@ public class AnalyticsAggregatorFactory {
                 }
                 throw new IllegalArgumentException("Cardinality aggregation precision ["  + precision + "] " +
                     "is not compatible with field precision [" + fieldType.precision() + "]. Precision threshold must " +
-                    "be lower or equal than [" + HyperLogLogPlusPlus.thresholdFromPrecision(fieldType.precision()) + "]");
+                    "be lower or equal than [" + MultiHyperLogLog.thresholdFromPrecision(fieldType.precision()) + "]");
             });
     }
 }

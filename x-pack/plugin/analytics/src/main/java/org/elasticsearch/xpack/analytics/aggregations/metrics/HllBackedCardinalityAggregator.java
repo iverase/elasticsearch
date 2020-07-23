@@ -11,7 +11,6 @@ import org.apache.lucene.search.ScoreMode;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.lease.Releasables;
 import org.elasticsearch.common.util.BigArrays;
-import org.elasticsearch.common.util.ByteArray;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.InternalAggregation;
 import org.elasticsearch.search.aggregations.LeafBucketCollector;
@@ -37,9 +36,7 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
     private final int fieldPrecision;
     private final ValuesSource valuesSource;
     @Nullable
-    private final HyperLogLogPlusPlus counts;
-    @Nullable
-    private final ByteArray collectorArray;
+    private final MultiHyperLogLog counts;
 
     public HllBackedCardinalityAggregator(
             String name,
@@ -56,10 +53,8 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
         this.fieldPrecision = fieldPrecision;
         if (valuesSource == null) {
             this.counts = null;
-            this.collectorArray = null;
         } else {
-            this.counts = new HyperLogLogPlusPlus(precision, context.bigArrays(), 1);
-            this.collectorArray = context.bigArrays().newByteArray(1 << precision);
+            this.counts = new MultiHyperLogLog(precision, context.bigArrays(), 1);
         }
     }
 
@@ -76,9 +71,9 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
         }
         HllValuesSource.HllSketch source = (HllValuesSource.HllSketch) valuesSource;
         if (precision == fieldPrecision) {
-            return new EqualPrecisionHllCollector(counts, source.getHllValues(ctx), collectorArray);
+            return new EqualPrecisionHllCollector(counts, source.getHllValues(ctx));
         } else {
-            return new DifferentPrecisionHllCollector(counts, source.getHllValues(ctx), collectorArray, fieldPrecision);
+            return new DifferentPrecisionHllCollector(counts, source.getHllValues(ctx), fieldPrecision);
         }
     }
 
@@ -96,7 +91,7 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
         // We need to build a copy because the returned Aggregation needs remain usable after
         // this Aggregator (and its HLL++ counters) is released.
         HyperLogLogPlusPlus copy = new HyperLogLogPlusPlus(precision, BigArrays.NON_RECYCLING_INSTANCE, 1);
-        copy.merge(0, counts, owningBucketOrdinal);
+        copy.merge(0, counts.getHyperLogLog(owningBucketOrdinal));
         return new InternalCardinality(name, copy, metadata());
     }
 
@@ -107,33 +102,24 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
 
     @Override
     protected void doClose() {
-        Releasables.close(counts, collectorArray);
+        Releasables.close(counts);
     }
 
     private static class EqualPrecisionHllCollector extends LeafBucketCollector {
 
         private final HllValues values;
-        private final HyperLogLogPlusPlus counts;
-        private final ByteArray tmp;
-        private final int m;
+        private final MultiHyperLogLog counts;
 
-        EqualPrecisionHllCollector(HyperLogLogPlusPlus counts, HllValues values, ByteArray byteArray) {
+        EqualPrecisionHllCollector(MultiHyperLogLog counts, HllValues values) {
             this.counts = counts;
             this.values = values;
-            this.tmp = byteArray;
-            this.m = 1 << counts.precision();
         }
 
         @Override
         public void collect(int doc, long bucketOrd) throws IOException {
             if (values.advanceExact(doc)) {
                 final HllValue value = values.hllValue();
-                for (int i = 0; i < m; i++) {
-                    value.next();
-                    tmp.set(i, value.value());
-                }
-                assert value.next() == false;
-                counts.collectRunLens(bucketOrd, tmp);
+                counts.merge(bucketOrd, value);
             }
         }
     }
@@ -141,19 +127,16 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
     private static class DifferentPrecisionHllCollector extends LeafBucketCollector {
 
         private final HllValues values;
-        private final HyperLogLogPlusPlus counts;
-        private final ByteArray tmp;
+        private final MultiHyperLogLog counts;
         private final int m;
         private final int precisionDiff;
         private final int registersToMerge;
 
-        DifferentPrecisionHllCollector(HyperLogLogPlusPlus counts,
+        DifferentPrecisionHllCollector(MultiHyperLogLog counts,
                                        HllValues values,
-                                       ByteArray byteArray,
                                        int fieldPrecision) {
             this.counts = counts;
             this.values = values;
-            this.tmp = byteArray;
             this.m = 1 << counts.precision();
             this.precisionDiff = fieldPrecision - counts.precision();
             this.registersToMerge = 1 << precisionDiff;
@@ -165,10 +148,9 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
                 final HllValue value = values.hllValue();
                 for (int i = 0; i < m; i++) {
                     final byte runLen = mergeRegister(value);
-                    tmp.set(i, runLen);
+                    counts.addRunLen(bucketOrd, i, runLen);
                 }
                 assert value.next() == false;
-                counts.collectRunLens(bucketOrd, tmp);
             }
         }
 

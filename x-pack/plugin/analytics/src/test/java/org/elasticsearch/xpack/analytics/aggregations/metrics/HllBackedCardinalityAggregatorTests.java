@@ -22,7 +22,6 @@ import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.Aggregator;
 import org.elasticsearch.search.aggregations.AggregatorTestCase;
 import org.elasticsearch.search.aggregations.metrics.CardinalityAggregationBuilder;
-import org.elasticsearch.search.aggregations.metrics.HyperLogLogPlusPlus;
 import org.elasticsearch.search.aggregations.metrics.InternalCardinality;
 import org.elasticsearch.search.aggregations.support.AggregationInspectionHelper;
 import org.elasticsearch.xpack.analytics.AnalyticsPlugin;
@@ -48,7 +47,7 @@ public class HllBackedCardinalityAggregatorTests extends AggregatorTestCase {
     @Override
     protected AggregationBuilder createAggBuilderForTypeTest(MappedFieldType fieldType, String fieldName) {
         return new CardinalityAggregationBuilder("cardinality")
-            .field(fieldName).precisionThreshold(HyperLogLogPlusPlus.thresholdFromPrecision(4));
+            .field(fieldName).precisionThreshold(MultiHyperLogLog.thresholdFromPrecision(4));
     }
 
     private BinaryDocValuesField getDocValue(String fieldName,int[] runLens) throws IOException {
@@ -125,7 +124,7 @@ public class HllBackedCardinalityAggregatorTests extends AggregatorTestCase {
 
                 CardinalityAggregationBuilder builder =
                         new CardinalityAggregationBuilder("test").field("field")
-                            .precisionThreshold(HyperLogLogPlusPlus.thresholdFromPrecision(4));
+                            .precisionThreshold(MultiHyperLogLog.thresholdFromPrecision(4));
 
                 MappedFieldType fieldType = new HllFieldMapper.HllFieldType("field", true, 4, false, Collections.emptyMap());
                 Aggregator aggregator = createAggregator(builder, indexSearcher, fieldType);

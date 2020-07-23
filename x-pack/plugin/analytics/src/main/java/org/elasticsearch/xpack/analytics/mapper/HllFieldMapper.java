@@ -41,6 +41,7 @@ import org.elasticsearch.index.query.QueryShardContext;
 import org.elasticsearch.index.query.QueryShardException;
 import org.elasticsearch.search.DocValueFormat;
 import org.elasticsearch.search.MultiValueMode;
+import org.elasticsearch.search.aggregations.metrics.AbstractHyperLogLog;
 import org.elasticsearch.search.sort.BucketedSort;
 import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.xpack.analytics.aggregations.support.AnalyticsValuesSourceType;
@@ -234,8 +235,8 @@ public class HllFieldMapper extends FieldMapper {
                             try {
                                 final BinaryDocValues values = DocValues.getBinary(context.reader(), fieldName);
                                 final ByteArrayDataInput dataInput = new ByteArrayDataInput();
-                                final InternalFixedLengthHllValue fixedValue = new InternalFixedLengthHllValue();
-                                final InternalRunLenHllValue runLenValue = new InternalRunLenHllValue();
+                                final InternalFixedLengthHllValue fixedValue = new InternalFixedLengthHllValue(precision);
+                                final InternalRunLenHllValue runLenValue = new InternalRunLenHllValue(precision);
                                 return new HllValues() {
 
                                     @Override
@@ -485,12 +486,13 @@ public class HllFieldMapper extends FieldMapper {
     }
 
     /** re-usable {@link HllValue} implementation */
-    private static class InternalFixedLengthHllValue extends HllValue {
+    private static class InternalFixedLengthHllValue extends HllValue implements AbstractHyperLogLog.RunLenIterator {
         private byte value;
         private boolean isExhausted;
         private ByteArrayDataInput dataInput;
 
-        InternalFixedLengthHllValue() {
+        InternalFixedLengthHllValue(int precision) {
+            super(precision);
         }
 
         /** reset the value for the HLL sketch */
@@ -522,17 +524,22 @@ public class HllFieldMapper extends FieldMapper {
         public void skip(int bytes) {
             dataInput.skipBytes(bytes);
         }
+
+        @Override
+        protected RunLenIterator getRunLens() {
+            return this;
+        }
     }
 
     /** re-usable {@link HllValue} implementation */
-    private static class InternalRunLenHllValue extends HllValue {
+    private static class InternalRunLenHllValue extends HllValue implements AbstractHyperLogLog.RunLenIterator {
         private byte value;
         private boolean isExhausted;
         private ByteArrayDataInput dataInput;
         private int valuesInBuffer;
 
-        InternalRunLenHllValue() {
-            dataInput = new ByteArrayDataInput();
+        InternalRunLenHllValue(int precision) {
+            super(precision);
         }
 
         /** reset the value for the HLL sketch */
@@ -576,6 +583,11 @@ public class HllFieldMapper extends FieldMapper {
                 next();
                 skip(bytes - valuesLeft - 1);
             }
+        }
+
+        @Override
+        protected RunLenIterator getRunLens() {
+            return this;
         }
     }
 }

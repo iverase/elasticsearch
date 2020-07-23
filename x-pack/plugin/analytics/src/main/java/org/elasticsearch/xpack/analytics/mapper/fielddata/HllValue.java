@@ -7,13 +7,19 @@
 package org.elasticsearch.xpack.analytics.mapper.fielddata;
 
 
+import org.elasticsearch.search.aggregations.metrics.AbstractHyperLogLog;
+
 import java.io.IOException;
 
 /**
  * Per-document Hll value. An Hll sketch consist on a fix length
  * array of bytes.
  */
-public abstract class HllValue {
+public abstract class HllValue extends AbstractHyperLogLog {
+
+    public HllValue(int precision) {
+        super(precision);
+    }
 
     /**
      * Advance this instance to the next value of the rinLens array
@@ -32,4 +38,9 @@ public abstract class HllValue {
      * @param bytes the number of bytes to skip
      */
     public abstract void skip(int bytes);
+
+    @Override
+    protected void addRunLen(int register, int runLen) {
+        throw new IllegalArgumentException("HyperLoLog doc value is read only");
+    }
 }
