@@ -34,9 +34,6 @@ import java.util.Objects;
  * http://static.googleusercontent.com/media/research.google.com/fr//pubs/archive/40671.pdf and its appendix
  * https://docs.google.com/document/d/1gyjfMHy43U9OWBXxfaeG-3MjGzejW1dlpyMwEYAAWEI/view?fullscreen
  *
- * This implementation is different from the original implementation in that it uses a hash table instead of a sorted list for linear
- * counting. Although this requires more space and makes hyperloglog (which is less accurate) used sooner, this is also considerably faster.
- *
  * Trying to understand what this class does without having read the paper is considered adventurous.
  *
  * It supports storing several HyperLogLog structures which are identified by a bucket number.
@@ -85,15 +82,6 @@ public final class HyperLogLog implements Releasable {
 
     public long maxBucket() {
         return hll.runLens.size() >>> hll.precision();
-    }
-
-    public void merge(long bucket, AbstractHyperLogLog other) {
-        hll.ensureCapacity(bucket + 1);
-        if (precision() != other.precision()) {
-            throw new IllegalArgumentException();
-        }
-        hll.bucket = bucket;
-        hll.merge(other);
     }
 
     public void addRunLen(long bucket, int register, int runLen) {

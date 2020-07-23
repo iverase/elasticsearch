@@ -235,8 +235,8 @@ public class HllFieldMapper extends FieldMapper {
                             try {
                                 final BinaryDocValues values = DocValues.getBinary(context.reader(), fieldName);
                                 final ByteArrayDataInput dataInput = new ByteArrayDataInput();
-                                final InternalFixedLengthHllValue fixedValue = new InternalFixedLengthHllValue(precision);
-                                final InternalRunLenHllValue runLenValue = new InternalRunLenHllValue(precision);
+                                final InternalFixedLengthHllValue fixedValue = new InternalFixedLengthHllValue();
+                                final InternalRunLenHllValue runLenValue = new InternalRunLenHllValue();
                                 return new HllValues() {
 
                                     @Override
@@ -491,8 +491,7 @@ public class HllFieldMapper extends FieldMapper {
         private boolean isExhausted;
         private ByteArrayDataInput dataInput;
 
-        InternalFixedLengthHllValue(int precision) {
-            super(precision);
+        InternalFixedLengthHllValue() {
         }
 
         /** reset the value for the HLL sketch */
@@ -524,11 +523,6 @@ public class HllFieldMapper extends FieldMapper {
         public void skip(int bytes) {
             dataInput.skipBytes(bytes);
         }
-
-        @Override
-        protected RunLenIterator getRunLens() {
-            return this;
-        }
     }
 
     /** re-usable {@link HllValue} implementation */
@@ -538,8 +532,7 @@ public class HllFieldMapper extends FieldMapper {
         private ByteArrayDataInput dataInput;
         private int valuesInBuffer;
 
-        InternalRunLenHllValue(int precision) {
-            super(precision);
+        InternalRunLenHllValue() {
         }
 
         /** reset the value for the HLL sketch */
@@ -583,11 +576,6 @@ public class HllFieldMapper extends FieldMapper {
                 next();
                 skip(bytes - valuesLeft - 1);
             }
-        }
-
-        @Override
-        protected RunLenIterator getRunLens() {
-            return this;
         }
     }
 }

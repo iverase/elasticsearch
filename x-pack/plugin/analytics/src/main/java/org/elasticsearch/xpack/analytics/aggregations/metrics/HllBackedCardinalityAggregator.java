@@ -109,17 +109,24 @@ public class HllBackedCardinalityAggregator extends NumericMetricsAggregator.Sin
 
         private final HllValues values;
         private final HyperLogLog counts;
+       private final int m;
 
         EqualPrecisionHllCollector(HyperLogLog counts, HllValues values) {
             this.counts = counts;
             this.values = values;
+            this.m = 1 << counts.precision();
         }
 
         @Override
         public void collect(int doc, long bucketOrd) throws IOException {
             if (values.advanceExact(doc)) {
                 final HllValue value = values.hllValue();
-                counts.merge(bucketOrd, value);
+                for (int i = 0; i < m; i++) {
+                    value.next();
+                    final byte runLen = value.value();
+                    counts.addRunLen(bucketOrd, i, runLen);
+                }
+                assert value.next() == false;
             }
         }
     }
