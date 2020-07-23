@@ -346,7 +346,7 @@ public final class HyperLogLogPlusPlus implements Releasable {
         private final ByteBuffer writeSpare;
         private final int p;
         private final BigArrays bigArrays;
-        private final LcIterator iterator;
+        private final LinearCountingIterator iterator;
         // We are actually using HyperLogLog's runLens array but interpreting it as a hash set for linear counting.
         private final HyperLogLog hll;
         // Number of elements stored.
@@ -366,7 +366,7 @@ public final class HyperLogLogPlusPlus implements Releasable {
             sizes = bigArrays.newIntArray(initialBucketCount);
             readSpare = new BytesRef();
             writeSpare = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
-            iterator = new LcIterator(this, capacity);
+            iterator = new LinearCountingIterator(this, capacity);
         }
 
         @Override
@@ -442,7 +442,7 @@ public final class HyperLogLogPlusPlus implements Releasable {
         }
     }
 
-    private static class LcIterator implements AbstractLinearCounting.HashesIterator {
+    private static class LinearCountingIterator implements AbstractLinearCounting.HashesIterator {
 
         private final LinearCounting lc;
         private final int capacity;
@@ -450,7 +450,7 @@ public final class HyperLogLogPlusPlus implements Releasable {
         long size;
         private int value;
 
-        LcIterator(LinearCounting lc, int capacity) {
+        LinearCountingIterator(LinearCounting lc, int capacity) {
             this.lc = lc;
             this.capacity = capacity;
         }
