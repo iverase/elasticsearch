@@ -174,7 +174,7 @@ public final class HyperLogLogPlusPlus implements Releasable {
                 hll.collectEncoded(encoded);
             }
             algorithm.set(bucket);
-        }finally {
+        } finally {
             Releasables.close(values);
         }
     }

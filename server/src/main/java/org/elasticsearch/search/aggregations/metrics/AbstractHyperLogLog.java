@@ -866,6 +866,7 @@ public abstract class AbstractHyperLogLog extends AbstractCardinalityAlgorithm {
 
     /** Iterator over a HyperLogLog register */
     public interface RunLenIterator {
+
         /**
          * Moves the iterator to the next element if it exists.
          * @return true if there is a next register, else false.

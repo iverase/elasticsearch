@@ -93,6 +93,7 @@ public abstract class AbstractLinearCounting extends AbstractCardinalityAlgorith
          * number of elements in the iterator
          */
         long size();
+
         /**
          * Moves the iterator to the next element if it exists.
          * @return true if there is a next value, else false.
