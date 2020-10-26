@@ -64,6 +64,10 @@ public class GeoPolygonDecomposer {
         if (polygon.isEmpty()) {
             return;
         }
+        if (true) {
+            collector.add(polygon);
+            return;
+        }
         int numEdges = polygon.getPolygon().length() - 1; // Last point is repeated
         for (int i = 0; i < polygon.getNumberOfHoles(); i++) {
             numEdges += polygon.getHole(i).length() - 1;
