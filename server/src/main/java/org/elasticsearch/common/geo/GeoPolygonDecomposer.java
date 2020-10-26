@@ -69,13 +69,18 @@ public class GeoPolygonDecomposer {
             numEdges += polygon.getHole(i).length() - 1;
             validateHole(polygon.getPolygon(), polygon.getHole(i));
         }
+        final AtomicBoolean translated = new AtomicBoolean(false);
+        final AtomicBoolean polygonOrientation = new AtomicBoolean(false);
+        if (needsProcessing(polygon.getPolygon(), orientation, translated, polygonOrientation) == false) {
+            collector.add(polygon);
+            return;
+        }
 
         Edge[] edges = new Edge[numEdges];
         Edge[] holeComponents = new Edge[polygon.getNumberOfHoles()];
-        final AtomicBoolean translated = new AtomicBoolean(false);
-        int offset = createEdges(0, orientation, polygon.getPolygon(), null, edges, 0, translated);
+        int offset = createEdges(0, orientation, polygon.getPolygon(), edges, 0, translated, polygonOrientation);
         for (int i = 0; i < polygon.getNumberOfHoles(); i++) {
-            int length = createEdges(i + 1, orientation, polygon.getPolygon(), polygon.getHole(i), edges, offset, translated);
+            int length = createEdges(i + 1, orientation, polygon.getHole(i), edges, offset, translated, polygonOrientation);
             holeComponents[i] = edges[offset];
             offset += length;
         }
@@ -86,6 +91,42 @@ public class GeoPolygonDecomposer {
         numHoles = merge(edges, 0, intersections(-DATELINE, edges), holeComponents, numHoles);
 
         compose(edges, holeComponents, numHoles, collector);
+    }
+
+    private static boolean needsProcessing(LinearRing shell, boolean orientation, AtomicBoolean translated, AtomicBoolean polygonOrientation) {
+        double signedArea = 0;
+        double minX = Double.POSITIVE_INFINITY;
+        double maxX = Double.NEGATIVE_INFINITY;
+        final int length = shell.length() - 1;
+        for (int i = 0; i <  length; i++) {
+            signedArea += shell.getX(i) * shell.getY(i + 1) - shell.getY(i) * shell.getX(i + 1);
+            minX = Math.min(minX, shell.getX(i));
+            maxX = Math.max(maxX, shell.getX(i));
+        }
+        if (signedArea == 0) {
+            // Points are collinear or self-intersection
+            throw new InvalidShapeException("Cannot determine orientation: signed area equal to 0");
+        }
+        polygonOrientation.set(signedArea < 0);
+
+       // boolean direction = !orientation; //
+        boolean handedness = orientation == false;
+        boolean incorrectOrientation = handedness != polygonOrientation.get();
+
+        // OGC requires shell as ccw (Right-Handedness) and holes as cw (Left-Handedness)
+        // since GeoJSON doesn't specify (and doesn't need to) GEO core will assume OGC standards
+        // thus if orientation is computed as cw, the logic will translate points across dateline
+        // and convert to a right handed system
+
+        // calculate range
+        final double rng = maxX - minX;
+        // translate the points if the following is true
+        //   1.  shell orientation is cw and range is greater than a hemisphere (180 degrees) but not spanning 2 hemispheres
+        //       (translation would result in a collapsed poly)
+        translated.set((incorrectOrientation && (rng > DATELINE && rng != 2 * DATELINE)));
+        //return incorrectOrientation || minX < -DATELINE || maxX > DATELINE;
+        //return false;//(rng > DATELINE && rng != 2 * DATELINE) || minX < -DATELINE || maxX > DATELINE;
+        return polygonOrientation.get() != orientation || (rng > DATELINE && rng != 2 * DATELINE) || minX < -DATELINE || maxX > DATELINE;
     }
 
     private static void validateHole(LinearRing shell, LinearRing hole) {
@@ -116,83 +157,51 @@ public class GeoPolygonDecomposer {
     }
 
     private static int createEdges(int component, boolean orientation, LinearRing shell,
-                            LinearRing hole, Edge[] edges, int offset, final AtomicBoolean translated) {
+                                   Edge[] edges, int offset, final AtomicBoolean translated, final AtomicBoolean polygonOrientation) {
         // inner rings (holes) have an opposite direction than the outer rings
         // XOR will invert the orientation for outer ring cases (Truth Table:, T/T = F, T/F = T, F/T = T, F/F = F)
         boolean direction = (component == 0 ^ orientation);
         // set the points array accordingly (shell or hole)
-        Point[] points = (hole != null) ? points(hole) : points(shell);
-        ring(component, direction, orientation == false, points, 0, edges, offset, points.length - 1, translated);
-        return points.length - 1;
-    }
-
-    private static Point[] points(LinearRing linearRing) {
-        Point[] points = new Point[linearRing.length()];
-        for (int i = 0; i < linearRing.length(); i++) {
-            points[i] = new Point(linearRing.getX(i), linearRing.getY(i));
-        }
-        return points;
+        //Point[] points = points(shell);
+        ring(component, direction, orientation == false, shell, 0, edges, offset, translated, polygonOrientation);
+        return shell.length() - 1;
     }
 
     /**
      * Create a connected list of a list of coordinates
      *
-     * @param points array of point
+     * @param shell array of point
      * @param offset index of the first point
-     * @param length number of points
      * @return Array of edges
      */
     private static Edge[] ring(int component, boolean direction, boolean handedness,
-                        Point[] points, int offset, Edge[] edges, int toffset, int length, final AtomicBoolean translated) {
-        double signedArea = 0;
-        double minX = Double.POSITIVE_INFINITY;
-        double maxX = Double.NEGATIVE_INFINITY;
-        for (int i = offset; i < offset + length; i++) {
-            signedArea += points[i].getX() * points[i + 1].getY() - points[i].getY() * points[i + 1].getX();
-            minX = Math.min(minX, points[i].getX());
-            maxX = Math.max(maxX, points[i].getX());
-        }
-        if (signedArea == 0) {
-            // Points are collinear or self-intersection
-            throw new InvalidShapeException("Cannot determine orientation: signed area equal to 0");
-        }
-        boolean orientation = signedArea < 0;
+                        LinearRing shell, int offset, Edge[] edges, int toffset, final AtomicBoolean translated, final AtomicBoolean polygonOrientation) {
 
-        // OGC requires shell as ccw (Right-Handedness) and holes as cw (Left-Handedness)
-        // since GeoJSON doesn't specify (and doesn't need to) GEO core will assume OGC standards
-        // thus if orientation is computed as cw, the logic will translate points across dateline
-        // and convert to a right handed system
-
-        // calculate range
-        final double rng = maxX - minX;
-        // translate the points if the following is true
-        //   1.  shell orientation is cw and range is greater than a hemisphere (180 degrees) but not spanning 2 hemispheres
-        //       (translation would result in a collapsed poly)
-        //   2.  the shell of the candidate hole has been translated (to preserve the coordinate system)
-        boolean incorrectOrientation = component == 0 && handedness != orientation;
-        if ((incorrectOrientation && (rng > DATELINE && rng != 2 * DATELINE)) || (translated.get() && component != 0)) {
-            translate(points);
-            // flip the translation bit if the shell is being translated
-            if (component == 0) {
-                translated.set(true);
-            }
+        boolean orientation = polygonOrientation.get();
+        if (translated.get()) {
+            shell = translate(shell);
             // correct the orientation post translation (ccw for shell, cw for holes)
             if (component == 0 || (component != 0 && handedness == orientation)) {
                 orientation = !orientation;
             }
         }
-        return concat(component, direction ^ orientation, points, offset, edges, toffset, length);
+        return concat(component, direction ^ orientation, shell, offset, edges, toffset, shell.length() - 1);
     }
 
     /**
      * Transforms coordinates in the eastern hemisphere (-180:0) to a (180:360) range
      */
-    private static void translate(Point[] points) {
-        for (int i = 0; i < points.length; i++) {
-            if (points[i].getX() < 0) {
-                points[i] = new Point(points[i].getX() + 2 * DATELINE, points[i].getY());
+    private static LinearRing translate(LinearRing shell) {
+        double[] lons = new double[shell.length()];
+        System.arraycopy(shell.getLons(), 0, lons, 0, shell.length());
+        double[] lats = new double[shell.length()];
+        System.arraycopy(shell.getLats(), 0, lats, 0, shell.length());
+        for (int i = 0; i < shell.length(); i++) {
+            if (lons[i] < 0) {
+                lons[i] += 2 * DATELINE;
             }
         }
+        return new LinearRing(lons, lats);
     }
 
     private static int merge(Edge[] intersections, int offset, int length, Edge[] holes, int numHoles) {
@@ -279,20 +288,20 @@ public class GeoPolygonDecomposer {
      *
      * @param component   component id of the polygon
      * @param direction   direction of the ring
-     * @param points      list of points to concatenate
+     * @param shell      list of points to concatenate
      * @param pointOffset index of the first point
      * @param edges       Array of edges to write the result to
      * @param edgeOffset  index of the first edge in the result
      * @param length      number of points to use
      * @return the edges creates
      */
-    private static Edge[] concat(int component, boolean direction, Point[] points, final int pointOffset, Edge[] edges,
+    private static Edge[] concat(int component, boolean direction, LinearRing shell, final int pointOffset, Edge[] edges,
                                                  final int edgeOffset, int length) {
         assert edges.length >= length + edgeOffset;
-        assert points.length >= length + pointOffset;
-        edges[edgeOffset] = new Edge(new Point(points[pointOffset].getX(), points[pointOffset].getY()), null);
+        assert shell.length() - 1 >= length + pointOffset;
+        edges[edgeOffset] = new Edge(new Point(shell.getX(pointOffset), shell.getY(pointOffset)), null);
         for (int i = 1; i < length; i++) {
-            Point nextPoint = new Point(points[pointOffset + i].getX(), points[pointOffset + i].getY());
+            Point nextPoint = new Point(shell.getX(pointOffset + i), shell.getY(pointOffset + i));
             if (direction) {
                 edges[edgeOffset + i] = new Edge(nextPoint, edges[edgeOffset + i - 1]);
                 edges[edgeOffset + i].component = component;

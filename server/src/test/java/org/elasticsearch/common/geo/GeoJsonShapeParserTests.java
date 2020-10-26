@@ -266,7 +266,7 @@ public class GeoJsonShapeParserTests extends BaseGeoParsingTestCase {
 
         org.elasticsearch.geometry.Polygon p = new org.elasticsearch.geometry.Polygon(
             new org.elasticsearch.geometry.LinearRing(
-                new double[] {100d, 101d, 101d, 100d, 100d}, new double[] {0d, 0d, 1d, 1d, 0d}
+                new double[] {100d, 101d, 101d, 100d, 100d}, new double[] {1d, 1d, 0d, 0d, 1d}
             ));
         assertGeometryEquals(p, polygonGeoJson, false);
     }
@@ -287,11 +287,11 @@ public class GeoJsonShapeParserTests extends BaseGeoParsingTestCase {
             .endObject();
 
         List<Coordinate> shellCoordinates = new ArrayList<>();
-        shellCoordinates.add(new Coordinate(100, 0, 10));
-        shellCoordinates.add(new Coordinate(101, 0, 10));
-        shellCoordinates.add(new Coordinate(101, 1, 10));
-        shellCoordinates.add(new Coordinate(100, 1, 10));
-        shellCoordinates.add(new Coordinate(100, 0, 10));
+        shellCoordinates.add(new Coordinate(100, 1.0, 10));
+        shellCoordinates.add(new Coordinate(101, 1.0, 10));
+        shellCoordinates.add(new Coordinate(101, 0.0, 10));
+        shellCoordinates.add(new Coordinate(100, 0.0, 10));
+        shellCoordinates.add(new Coordinate(100, 1.0, 10));
         Coordinate[] coordinates = shellCoordinates.toArray(new Coordinate[shellCoordinates.size()]);
 
         Version randomVersion = VersionUtils.randomIndexCompatibleVersion(random());
@@ -312,8 +312,8 @@ public class GeoJsonShapeParserTests extends BaseGeoParsingTestCase {
         }
 
         org.elasticsearch.geometry.Polygon p = new org.elasticsearch.geometry.Polygon(new org.elasticsearch.geometry.LinearRing(
-            Arrays.stream(coordinates).mapToDouble(i->i.x).toArray(), Arrays.stream(coordinates).mapToDouble(i->i.y).toArray()
-        ));
+            Arrays.stream(coordinates).mapToDouble(i->i.x).toArray(), Arrays.stream(coordinates).mapToDouble(i->i.y).toArray(),
+            Arrays.stream(coordinates).mapToDouble(i->i.z).toArray()));
         assertGeometryEquals(p, polygonGeoJson, false);
     }
 
@@ -865,10 +865,10 @@ public class GeoJsonShapeParserTests extends BaseGeoParsingTestCase {
 
         org.elasticsearch.geometry.LinearRing hole =
             new org.elasticsearch.geometry.LinearRing(
-                new double[] {100.8d, 100.8d, 100.2d, 100.2d, 100.8d}, new double[] {0.8d, 0.2d, 0.2d, 0.8d, 0.8d});
+                new double[] {100.2d, 100.2d, 100.8d, 100.8d, 100.2d}, new double[] {0.8d, 0.2d, 0.2d, 0.8d, 0.8d});
         org.elasticsearch.geometry.Polygon p =
             new org.elasticsearch.geometry.Polygon(new org.elasticsearch.geometry.LinearRing(
-                new double[] {100d, 101d, 101d, 100d, 100d}, new double[] {0d, 0d, 1d, 1d, 0d}), Collections.singletonList(hole));
+                new double[] {100d, 101d, 101d, 100d, 100d}, new double[] {1.0d, 1.0d, 0.0d, 0.0d, 1.0d}), Collections.singletonList(hole));
         assertGeometryEquals(p, polygonGeoJson, false);
     }
 
@@ -1043,11 +1043,12 @@ public class GeoJsonShapeParserTests extends BaseGeoParsingTestCase {
 
         org.elasticsearch.geometry.LinearRing luceneHole =
             new org.elasticsearch.geometry.LinearRing(
-                new double[] {100.8d, 100.8d, 100.2d, 100.2d, 100.8d}, new double[] {0.8d, 0.2d, 0.2d, 0.8d, 0.8d});
+                new double[] {100.2d, 100.2d, 100.8d, 100.8d, 100.2d}, new double[] {0.8d, 0.2d, 0.2d, 0.8d, 0.8d});
 
         org.elasticsearch.geometry.Polygon lucenePolygons = (new org.elasticsearch.geometry.Polygon(
             new org.elasticsearch.geometry.LinearRing(
-                new double[] {100d, 101d, 101d, 100d, 100d}, new double[] {0d, 0d, 1d, 1d, 0d}), Collections.singletonList(luceneHole)));
+                new double[] {100d, 101d, 101d, 100d, 100d}, new double[] {1.0d, 1.0d, 0.0d, 0.0d, 1.0d}),
+                Collections.singletonList(luceneHole)));
         assertGeometryEquals(lucenePolygons, multiPolygonGeoJson, false);
     }
 
