@@ -21,7 +21,9 @@ package org.elasticsearch.index.codec;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.codecs.Codec;
+import org.apache.lucene.codecs.DocValuesFormat;
 import org.apache.lucene.codecs.PostingsFormat;
+import org.apache.lucene.codecs.lucene80.Lucene80DocValuesFormat;
 import org.apache.lucene.codecs.lucene87.Lucene87Codec;
 import org.elasticsearch.common.lucene.Lucene;
 import org.elasticsearch.index.mapper.CompletionFieldMapper;
@@ -39,6 +41,7 @@ import org.elasticsearch.index.mapper.MapperService;
 public class PerFieldMappingPostingFormatCodec extends Lucene87Codec {
     private final Logger logger;
     private final MapperService mapperService;
+    private final DocValuesFormat bestCompressionDocValueFormat;
 
     static {
         assert Codec.forName(Lucene.LATEST_CODEC).getClass().isAssignableFrom(PerFieldMappingPostingFormatCodec.class) :
@@ -49,6 +52,7 @@ public class PerFieldMappingPostingFormatCodec extends Lucene87Codec {
         super(compressionMode);
         this.mapperService = mapperService;
         this.logger = logger;
+        this.bestCompressionDocValueFormat = new Lucene80DocValuesFormat(Lucene80DocValuesFormat.Mode.BEST_COMPRESSION);
     }
 
     @Override
@@ -62,4 +66,10 @@ public class PerFieldMappingPostingFormatCodec extends Lucene87Codec {
         return super.getPostingsFormatForField(field);
     }
 
+    @Override
+    public DocValuesFormat getDocValuesFormatForField(String field) {
+        // use always best compression for doc values
+        // TODO: There is no easy way to test this as there is no information in the segments
+        return bestCompressionDocValueFormat;
+    }
 }
