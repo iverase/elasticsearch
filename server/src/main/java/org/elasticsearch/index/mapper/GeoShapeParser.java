@@ -11,9 +11,9 @@ package org.elasticsearch.index.mapper;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.geo.GeometryNormalizer;
 import org.elasticsearch.common.geo.GeometryParser;
-import org.elasticsearch.common.geo.Orientation;
 import org.elasticsearch.core.CheckedConsumer;
 import org.elasticsearch.geometry.Geometry;
+import org.elasticsearch.geometry.Orientation;
 import org.elasticsearch.xcontent.XContentParser;
 
 import java.io.IOException;

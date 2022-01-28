@@ -6,12 +6,8 @@
  * Side Public License, v 1.
  */
 
-package org.elasticsearch.common.geo;
+package org.elasticsearch.geometry;
 
-import org.elasticsearch.common.io.stream.StreamInput;
-import org.elasticsearch.common.io.stream.StreamOutput;
-
-import java.io.IOException;
 import java.util.Locale;
 
 public enum Orientation {
@@ -22,14 +18,6 @@ public enum Orientation {
     public static final Orientation COUNTER_CLOCKWISE = Orientation.RIGHT;
     public static final Orientation CW = Orientation.LEFT;
     public static final Orientation CCW = Orientation.RIGHT;
-
-    public void writeTo(StreamOutput out) throws IOException {
-        out.writeBoolean(this == Orientation.RIGHT);
-    }
-
-    public static Orientation readFrom(StreamInput in) throws IOException {
-        return in.readBoolean() ? Orientation.RIGHT : Orientation.LEFT;
-    }
 
     public boolean getAsBoolean() {
         return this == Orientation.RIGHT;

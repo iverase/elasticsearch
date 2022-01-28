@@ -8,8 +8,8 @@
 package org.elasticsearch.xpack.spatial.index.fielddata;
 
 import org.apache.lucene.util.BytesRef;
-import org.elasticsearch.common.geo.Orientation;
 import org.elasticsearch.geometry.Geometry;
+import org.elasticsearch.geometry.Orientation;
 import org.elasticsearch.geometry.Rectangle;
 import org.elasticsearch.geometry.utils.GeographyValidator;
 import org.elasticsearch.geometry.utils.WellKnownText;

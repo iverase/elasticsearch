@@ -8,7 +8,7 @@
 package org.elasticsearch.index.mapper;
 
 import org.elasticsearch.common.Explicit;
-import org.elasticsearch.common.geo.Orientation;
+import org.elasticsearch.geometry.Orientation;
 import org.elasticsearch.index.analysis.NamedAnalyzer;
 
 import java.util.Collections;

@@ -8,10 +8,10 @@
 
 package org.elasticsearch.legacygeo.builders;
 
-import org.elasticsearch.common.geo.Orientation;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.geometry.MultiPolygon;
+import org.elasticsearch.geometry.Orientation;
 import org.elasticsearch.geometry.Polygon;
 import org.elasticsearch.legacygeo.GeoShapeType;
 import org.elasticsearch.legacygeo.XShapeCollection;
@@ -53,7 +53,7 @@ public class MultiPolygonBuilder extends ShapeBuilder<Shape, MultiPolygon, Multi
      * Read from a stream.
      */
     public MultiPolygonBuilder(StreamInput in) throws IOException {
-        orientation = Orientation.readFrom(in);
+        orientation = in.readBoolean() ? Orientation.RIGHT : Orientation.LEFT;
         int holes = in.readVInt();
         for (int i = 0; i < holes; i++) {
             polygon(new PolygonBuilder(in));
@@ -62,7 +62,7 @@ public class MultiPolygonBuilder extends ShapeBuilder<Shape, MultiPolygon, Multi
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        orientation.writeTo(out);
+        out.writeBoolean(orientation == Orientation.RIGHT);
         out.writeVInt(polygons.size());
         for (PolygonBuilder polygon : polygons) {
             polygon.writeTo(out);

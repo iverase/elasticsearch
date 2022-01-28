@@ -8,11 +8,11 @@
 
 package org.elasticsearch.legacygeo.builders;
 
-import org.elasticsearch.common.geo.Orientation;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.util.set.Sets;
 import org.elasticsearch.core.Tuple;
+import org.elasticsearch.geometry.Orientation;
 import org.elasticsearch.legacygeo.GeoShapeType;
 import org.elasticsearch.legacygeo.parsers.ShapeParser;
 import org.elasticsearch.xcontent.XContentBuilder;
@@ -82,7 +82,7 @@ public class PolygonBuilder extends ShapeBuilder<JtsGeometry, org.elasticsearch.
      */
     public PolygonBuilder(StreamInput in) throws IOException {
         shell = new LineStringBuilder(in);
-        orientation = Orientation.readFrom(in);
+        orientation = in.readBoolean() ? Orientation.RIGHT : Orientation.LEFT;
         int holesValue = in.readVInt();
         for (int i = 0; i < holesValue; i++) {
             hole(new LineStringBuilder(in));
@@ -92,7 +92,7 @@ public class PolygonBuilder extends ShapeBuilder<JtsGeometry, org.elasticsearch.
     @Override
     public void writeTo(StreamOutput out) throws IOException {
         shell.writeTo(out);
-        orientation.writeTo(out);
+        out.writeBoolean(orientation == Orientation.RIGHT);
         out.writeVInt(holes.size());
         for (LineStringBuilder hole : holes) {
             hole.writeTo(out);

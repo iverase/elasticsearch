@@ -9,8 +9,8 @@
 package org.elasticsearch.legacygeo;
 
 import org.elasticsearch.common.geo.GeometryNormalizer;
-import org.elasticsearch.common.geo.Orientation;
 import org.elasticsearch.geometry.LinearRing;
+import org.elasticsearch.geometry.Orientation;
 import org.elasticsearch.legacygeo.builders.CircleBuilder;
 import org.elasticsearch.legacygeo.builders.CoordinatesBuilder;
 import org.elasticsearch.legacygeo.builders.EnvelopeBuilder;

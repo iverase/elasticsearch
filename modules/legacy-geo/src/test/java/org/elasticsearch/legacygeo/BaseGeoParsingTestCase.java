@@ -9,7 +9,7 @@ package org.elasticsearch.legacygeo;
 
 import org.elasticsearch.common.geo.GeometryNormalizer;
 import org.elasticsearch.common.geo.GeometryParser;
-import org.elasticsearch.common.geo.Orientation;
+import org.elasticsearch.geometry.Orientation;
 import org.elasticsearch.legacygeo.parsers.ShapeParser;
 import org.elasticsearch.legacygeo.test.ElasticsearchGeoAssertions;
 import org.elasticsearch.test.ESTestCase;

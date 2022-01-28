@@ -8,7 +8,7 @@
 
 package org.elasticsearch.legacygeo.builders;
 
-import org.elasticsearch.common.geo.Orientation;
+import org.elasticsearch.geometry.Orientation;
 import org.elasticsearch.legacygeo.test.RandomShapeGenerator;
 import org.elasticsearch.legacygeo.test.RandomShapeGenerator.ShapeType;
 import org.locationtech.jts.geom.Coordinate;

@@ -8,9 +8,9 @@ package org.elasticsearch.xpack.enrich;
 
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.common.geo.GeometryParser;
-import org.elasticsearch.common.geo.Orientation;
 import org.elasticsearch.common.geo.ShapeRelation;
 import org.elasticsearch.geometry.Geometry;
+import org.elasticsearch.geometry.Orientation;
 import org.elasticsearch.index.query.GeoShapeQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.script.TemplateScript;
