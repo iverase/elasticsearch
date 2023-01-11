@@ -156,9 +156,9 @@ final class CoordIJK {
         // iVec (3, 0, 1)
         // jVec (1, 3, 0)
         // kVec (0, 1, 3)
-        final int i = Math.addExact(Math.multiplyExact(this.i, 3) , this.j);
-        final int j = Math.addExact(Math.multiplyExact(this.j, 3) , this.k);
-        final int k = Math.addExact(Math.multiplyExact(this.k, 3) , this.i);
+        final int i = Math.addExact(Math.multiplyExact(this.i, 3), this.j);
+        final int j = Math.addExact(Math.multiplyExact(this.j, 3), this.k);
+        final int k = Math.addExact(Math.multiplyExact(this.k, 3), this.i);
         this.i = i;
         this.j = j;
         this.k = k;
@@ -173,9 +173,9 @@ final class CoordIJK {
         // iVec (3, 1, 0)
         // jVec (0, 3, 1)
         // kVec (1, 0, 3)
-        final int i = Math.addExact(Math.multiplyExact(this.i, 3) , this.k);
-        final int j = Math.addExact(Math.multiplyExact(this.j, 3) , this.i);
-        final int k = Math.addExact(Math.multiplyExact(this.k, 3) , this.j);
+        final int i = Math.addExact(Math.multiplyExact(this.i, 3), this.k);
+        final int j = Math.addExact(Math.multiplyExact(this.j, 3), this.i);
+        final int k = Math.addExact(Math.multiplyExact(this.k, 3), this.j);
         this.i = i;
         this.j = j;
         this.k = k;
@@ -191,9 +191,9 @@ final class CoordIJK {
         // iVec (2, 0, 1)
         // jVec (1, 2, 0)
         // kVec (0, 1, 2)
-        final int i = Math.addExact(Math.multiplyExact(this.i, 2) , this.j);
-        final int j = Math.addExact(Math.multiplyExact(this.j, 2) , this.k);
-        final int k = Math.addExact(Math.multiplyExact(this.k, 2) , this.i);
+        final int i = Math.addExact(Math.multiplyExact(this.i, 2), this.j);
+        final int j = Math.addExact(Math.multiplyExact(this.j, 2), this.k);
+        final int k = Math.addExact(Math.multiplyExact(this.k, 2), this.i);
         this.i = i;
         this.j = j;
         this.k = k;
@@ -209,9 +209,9 @@ final class CoordIJK {
         // iVec (2, 1, 0)
         // jVec (0, 2, 1)
         // kVec (1, 0, 2)
-        final int i = Math.addExact(Math.multiplyExact(this.i, 2) , this.k);
-        final int j = Math.addExact(Math.multiplyExact(this.j, 2) , this.i);
-        final int k = Math.addExact(Math.multiplyExact(this.k, 2) , this.j);
+        final int i = Math.addExact(Math.multiplyExact(this.i, 2), this.k);
+        final int j = Math.addExact(Math.multiplyExact(this.j, 2), this.i);
+        final int k = Math.addExact(Math.multiplyExact(this.k, 2), this.j);
         this.i = i;
         this.j = j;
         this.k = k;
