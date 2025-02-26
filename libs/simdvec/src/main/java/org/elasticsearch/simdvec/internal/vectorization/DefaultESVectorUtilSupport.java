@@ -25,6 +25,21 @@ final class DefaultESVectorUtilSupport implements ESVectorUtilSupport {
     DefaultESVectorUtilSupport() {}
 
     @Override
+    public long ipByteBinByteHigh(byte[] q, byte[] d) {
+        return ipByteBinByteHighImpl(q, d);
+    }
+
+    @Override
+    public long ipByteBinByteLow(byte[] q, byte[] d) {
+        return ipByteBinByteLowImpl(q, d);
+    }
+
+    @Override
+    public long ipByteBinByte(byte[] q, byte[] d, int bitPos) {
+        return ipByteBinByteImpl(q, d, bitPos);
+    }
+
+    @Override
     public long ipByteBinByte(byte[] q, byte[] d) {
         return ipByteBinByteImpl(q, d);
     }
@@ -86,19 +101,37 @@ final class DefaultESVectorUtilSupport implements ESVectorUtilSupport {
     }
 
     public static long ipByteBinByteImpl(byte[] q, byte[] d) {
+        return ipByteBinByteImpl(0, B_QUERY, q, d);
+    }
+
+    public static long ipByteBinByteHighImpl(byte[] q, byte[] d) {
+        return ipByteBinByteImpl(0, 2, q, d);
+    }
+
+    public static long ipByteBinByteLowImpl(byte[] q, byte[] d) {
+        return ipByteBinByteImpl(2, B_QUERY, q, d);
+    }
+
+    public static long ipByteBinByteImpl(byte[] q, byte[] d, int bitPos) {
+        return ipByteBinByteImpl(bitPos, bitPos + 1, q, d);
+    }
+
+    private static long ipByteBinByteImpl(int start, int end, byte[] q, byte[] d) {
         long ret = 0;
         int size = d.length;
-        for (int i = 0; i < B_QUERY; i++) {
+        for (int i = start; i < end; i++) {
             int r = 0;
             long subRet = 0;
+            int offset = i * size;
             for (final int upperBound = d.length & -Integer.BYTES; r < upperBound; r += Integer.BYTES) {
-                subRet += Integer.bitCount((int) BitUtil.VH_NATIVE_INT.get(q, i * size + r) & (int) BitUtil.VH_NATIVE_INT.get(d, r));
+                subRet += Integer.bitCount((int) BitUtil.VH_NATIVE_INT.get(q, offset + r) & (int) BitUtil.VH_NATIVE_INT.get(d, r));
             }
             for (; r < d.length; r++) {
-                subRet += Integer.bitCount((q[i * size + r] & d[r]) & 0xFF);
+                subRet += Integer.bitCount((q[offset + r] & d[r]) & 0xFF);
             }
             ret += subRet << i;
         }
         return ret;
     }
+
 }

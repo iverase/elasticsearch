@@ -48,6 +48,27 @@ public class ESVectorUtil {
         return IMPL.ipByteBinByte(q, d);
     }
 
+    public static long ipByteBinByte(byte[] q, byte[] d, int bitPos) {
+        if (q.length != d.length * B_QUERY) {
+            throw new IllegalArgumentException("vector dimensions incompatible: " + q.length + "!= " + B_QUERY + " x " + d.length);
+        }
+        return IMPL.ipByteBinByte(q, d, bitPos);
+    }
+
+    public static long ipByteBinByteHigh(byte[] q, byte[] d) {
+        if (q.length != d.length * B_QUERY) {
+            throw new IllegalArgumentException("vector dimensions incompatible: " + q.length + "!= " + B_QUERY + " x " + d.length);
+        }
+        return IMPL.ipByteBinByteHigh(q, d);
+    }
+
+    public static long ipByteBinByteLow(byte[] q, byte[] d) {
+        if (q.length != d.length * B_QUERY) {
+            throw new IllegalArgumentException("vector dimensions incompatible: " + q.length + "!= " + B_QUERY + " x " + d.length);
+        }
+        return IMPL.ipByteBinByteLow(q, d);
+    }
+
     /**
      * Compute the inner product of two vectors, where the query vector is a byte vector and the document vector is a bit vector.
      * This will return the sum of the query vector values using the document vector as a mask.

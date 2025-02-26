@@ -122,6 +122,38 @@ public class ESVectorUtilTests extends BaseVectorizationTests {
         testIpByteBinImpl(ESVectorUtil::ipByteBinByte);
         testIpByteBinImpl(defaultedProvider.getVectorUtilSupport()::ipByteBinByte);
         testIpByteBinImpl(defOrPanamaProvider.getVectorUtilSupport()::ipByteBinByte);
+
+        testIpByteBinImpl((q, d) -> {
+            long res = 0;
+            for (int j = 0; j < B_QUERY; j++) {
+                res += ESVectorUtil.ipByteBinByte(q, d, j);
+            }
+            return res;
+        });
+        testIpByteBinImpl((q, d) -> {
+            long res = 0;
+            for (int j = 0; j < B_QUERY; j++) {
+                res += defaultedProvider.getVectorUtilSupport().ipByteBinByte(q, d, j);
+            }
+            return res;
+        });
+        testIpByteBinImpl((q, d) -> {
+            long res = 0;
+            for (int j = 0; j < B_QUERY; j++) {
+                res += defOrPanamaProvider.getVectorUtilSupport().ipByteBinByte(q, d, j);
+            }
+            return res;
+        });
+
+        testIpByteBinImpl((b, q) -> { return ESVectorUtil.ipByteBinByteHigh(b, q) + ESVectorUtil.ipByteBinByteLow(b, q); });
+        testIpByteBinImpl((b, q) -> {
+            return defaultedProvider.getVectorUtilSupport().ipByteBinByteHigh(b, q) + defaultedProvider.getVectorUtilSupport()
+                .ipByteBinByteLow(b, q);
+        });
+        testIpByteBinImpl((b, q) -> {
+            return defOrPanamaProvider.getVectorUtilSupport().ipByteBinByteHigh(b, q) + defOrPanamaProvider.getVectorUtilSupport()
+                .ipByteBinByteLow(b, q);
+        });
     }
 
     void testIpByteBinImpl(IpByteBin ipByteBinFunc) {

@@ -15,7 +15,7 @@ import org.apache.lucene.util.VectorUtil;
 import static org.apache.lucene.index.VectorSimilarityFunction.COSINE;
 import static org.apache.lucene.index.VectorSimilarityFunction.EUCLIDEAN;
 
-class OptimizedScalarQuantizer {
+public class OptimizedScalarQuantizer {
     // The initial interval is set to the minimum MSE grid for each number of bits
     // these starting points are derived from the optimal MSE grid for a uniform distribution
     static final float[][] MINIMUM_MSE_GRID = new float[][] {
@@ -39,7 +39,7 @@ class OptimizedScalarQuantizer {
         this.iters = iters;
     }
 
-    OptimizedScalarQuantizer(VectorSimilarityFunction similarityFunction) {
+    public OptimizedScalarQuantizer(VectorSimilarityFunction similarityFunction) {
         this(similarityFunction, DEFAULT_LAMBDA, DEFAULT_ITERS);
     }
 
