@@ -275,7 +275,7 @@ public final class PanamaESVectorUtilSupport implements ESVectorUtilSupport {
             subRet0 += Integer.bitCount((q[i] & d[i]) & 0xFF);
             subRet1 += Integer.bitCount((q[i + d.length] & d[i]) & 0xFF);
         }
-        return (subRet0 << 2) + (subRet1 << 3);
+        return subRet0 + (subRet1 << 1);
     }
 
     public static long ipByteBin128(byte[] q, byte[] d) {
