@@ -17,7 +17,6 @@ import org.elasticsearch.index.codec.vectors.BQSpaceUtils;
 import org.elasticsearch.index.codec.vectors.BQVectorUtils;
 import org.elasticsearch.index.codec.vectors.es818.OptimizedScalarQuantizer;
 import org.elasticsearch.simdvec.ESVectorUtil;
-import org.elasticsearch.simdvec.VectorScorerFactory;
 import org.elasticsearch.simdvec.internal.vectorization.ESVectorUtilSupport;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -74,18 +73,6 @@ public class OSQScorerBenchmark {
 
     @Setup
     public void setup() throws IOException {
-        var optionalVectorScorerFactory = VectorScorerFactory.instance();
-        if (optionalVectorScorerFactory.isEmpty()) {
-            String msg = "JDK=["
-                + Runtime.version()
-                + "], os.name=["
-                + System.getProperty("os.name")
-                + "], os.arch=["
-                + System.getProperty("os.arch")
-                + "]";
-            throw new AssertionError("Vector scorer factory not present. Cannot run the benchmark. " + msg);
-        }
-
         vectors = new float[numVectors][dims];
         centroid = new float[dims];
         for (int i = 0; i < numVectors; i++) {
