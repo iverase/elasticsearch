@@ -48,6 +48,13 @@ public class ESVectorUtil {
         return IMPL.ipByteBinByte(q, d);
     }
 
+    public static void ipByteBinByteBulk(byte[] q, byte[] d, int size, int count, long[] output) {
+        if (size != q.length / B_QUERY) {
+            throw new IllegalArgumentException("vector dimensions incompatible: " + size + "!= " + B_QUERY + " x " + d.length);
+        }
+        IMPL.ipByteBinByteBulk(q, d, size, count, output);
+    }
+
     /**
      * Compute the inner product of two vectors, where the query vector is a byte vector and the document vector is a bit vector.
      * This will return the sum of the query vector values using the document vector as a mask.

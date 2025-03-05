@@ -78,6 +78,10 @@ public class ESVectorUtilTests extends BaseVectorizationTests {
         long apply(byte[] q, byte[] d);
     }
 
+    interface IpByteBinBulk {
+        void apply(byte[] q, byte[] d, int size, int count, long[] output);
+    }
+
     interface BitOps {
         long apply(byte[] q, byte[] d);
     }
@@ -161,10 +165,57 @@ public class ESVectorUtilTests extends BaseVectorizationTests {
         }
     }
 
+    public void testIpByteBinBulk() {
+        testIpByteBinBulkImpl(ESVectorUtil::ipByteBinByteBulk);
+        testIpByteBinBulkImpl(defaultedProvider.getVectorUtilSupport()::ipByteBinByteBulk);
+        testIpByteBinBulkImpl(defOrPanamaProvider.getVectorUtilSupport()::ipByteBinByteBulk);
+    }
+
+    void testIpByteBinBulkImpl(IpByteBinBulk ipByteBinFunc) {
+        int iterations = atLeast(50);
+        for (int i = 0; i < iterations; i++) {
+            int size = random().nextInt(5000);
+            int count = random().nextInt(20) + 1;
+            var d = new byte[size * count];
+            var q = new byte[size * B_QUERY];
+            var scalarOutput = new long[count];
+            var output = new long[count];
+            random().nextBytes(d);
+            random().nextBytes(q);
+            ipByteBinFunc.apply(q, d, size, count, output);
+            for (int j = 0; j < count; j++) {
+                scalarOutput[j] = scalarIpByteBin(q, d, j * size, size);
+            }
+            assertArrayEquals(scalarOutput, output);
+
+            Arrays.fill(d, Byte.MAX_VALUE);
+            Arrays.fill(q, Byte.MAX_VALUE);
+            Arrays.fill(output, 0L);
+            ipByteBinFunc.apply(q, d, size, count, output);
+            for (int j = 0; j < count; j++) {
+                scalarOutput[j] = scalarIpByteBin(q, d, j * size, size);
+            }
+            assertArrayEquals(scalarOutput, output);
+
+            Arrays.fill(d, Byte.MIN_VALUE);
+            Arrays.fill(q, Byte.MIN_VALUE);
+            Arrays.fill(output, 0L);
+            ipByteBinFunc.apply(q, d, size, count, output);
+            for (int j = 0; j < count; j++) {
+                scalarOutput[j] = scalarIpByteBin(q, d, j * size, size);
+            }
+            assertArrayEquals(scalarOutput, output);
+        }
+    }
+
     static int scalarIpByteBin(byte[] q, byte[] d) {
+        return scalarIpByteBin(q, d, 0, d.length);
+    }
+
+    static int scalarIpByteBin(byte[] q, byte[] d, int offset, int length) {
         int res = 0;
         for (int i = 0; i < B_QUERY; i++) {
-            res += (popcount(q, i * d.length, d, d.length) << i);
+            res += (popcount(q, i * length, d, offset, length) << i);
         }
         return res;
     }
@@ -177,10 +228,10 @@ public class ESVectorUtilTests extends BaseVectorizationTests {
         return res;
     }
 
-    public static int popcount(byte[] a, int aOffset, byte[] b, int length) {
+    public static int popcount(byte[] a, int aOffset, byte[] b, int bOffset, int length) {
         int res = 0;
         for (int j = 0; j < length; j++) {
-            int value = (a[aOffset + j] & b[j]) & 0xFF;
+            int value = (a[aOffset + j] & b[bOffset + j]) & 0xFF;
             for (int k = 0; k < Byte.SIZE; k++) {
                 if ((value & (1 << k)) != 0) {
                     ++res;

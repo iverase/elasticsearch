@@ -15,6 +15,8 @@ public interface ESVectorUtilSupport {
 
     long ipByteBinByte(byte[] q, byte[] d);
 
+    void ipByteBinByteBulk(byte[] q, byte[] d, int size, int count, long[] output);
+
     int ipByteBit(byte[] q, byte[] d);
 
     float ipFloatBit(float[] q, byte[] d);

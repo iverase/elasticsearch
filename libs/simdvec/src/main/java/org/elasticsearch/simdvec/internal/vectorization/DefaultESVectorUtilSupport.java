@@ -30,6 +30,11 @@ final class DefaultESVectorUtilSupport implements ESVectorUtilSupport {
     }
 
     @Override
+    public void ipByteBinByteBulk(byte[] q, byte[] d, int size, int count, long[] output) {
+        ipByteBinByteBulkImpl(q, d, size, count, output);
+    }
+
+    @Override
     public int ipByteBit(byte[] q, byte[] d) {
         return ipByteBitImpl(q, d);
     }
@@ -105,6 +110,23 @@ final class DefaultESVectorUtilSupport implements ESVectorUtilSupport {
             ret += subRet << i;
         }
         return ret;
+    }
+
+    public static void ipByteBinByteBulkImpl(byte[] q, byte[] d, int size, int count, long[] output) {
+        for (int i = 0; i < count; i++) {
+            for (int j = 0; j < B_QUERY; j++) {
+                int r = 0;
+                long subRet = 0;
+                for (final int upperBound = size & -Integer.BYTES; r < upperBound; r += Integer.BYTES) {
+                    subRet += Integer.bitCount((int) BitUtil.VH_NATIVE_INT.get(q, j * size + r) &
+                        (int) BitUtil.VH_NATIVE_INT.get(d, i * size + r));
+                }
+                for (; r < size; r++) {
+                    subRet += Integer.bitCount((q[j * size + r] & d[i * size + r]) & 0xFF);
+                }
+                output[i] += subRet << j;
+            }
+        }
     }
 
     public static float ipFloatByteImpl(float[] q, byte[] d) {
