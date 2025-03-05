@@ -12,7 +12,6 @@ package org.elasticsearch.benchmark.vector;
 import org.elasticsearch.common.logging.LogConfigurator;
 import org.elasticsearch.index.codec.vectors.BQSpaceUtils;
 import org.elasticsearch.simdvec.ESVectorUtil;
-import org.elasticsearch.simdvec.VectorScorerFactory;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -65,17 +64,7 @@ public class OSQScorerBenchmark {
 
     @Setup
     public void setup() throws IOException {
-        var optionalVectorScorerFactory = VectorScorerFactory.instance();
-        if (optionalVectorScorerFactory.isEmpty()) {
-            String msg = "JDK=["
-                + Runtime.version()
-                + "], os.name=["
-                + System.getProperty("os.name")
-                + "], os.arch=["
-                + System.getProperty("os.arch")
-                + "]";
-            throw new AssertionError("Vector scorer factory not present. Cannot run the benchmark. " + msg);
-        }
+
 
         size = dims / 8;
 
