@@ -77,9 +77,9 @@ public class OSQScorerBenchmark {
             ThreadLocalRandom.current().nextBytes(packedQuery[i]);
         }
         bulkVectors = new byte[numVectors/ 16][16 * size];
-        for (int i =0; i < bulkVectors.length; i += 16) {
+        for (int i = 0; i < bulkVectors.length; i++) {
             for (int j = 0; j < 16; j++) {
-                System.arraycopy(packedVector[i + j], 0, bulkVectors[i], j * size, size);
+                System.arraycopy(packedVector[16 * i + j], 0, bulkVectors[i], j * size, size);
             }
         }
     }
