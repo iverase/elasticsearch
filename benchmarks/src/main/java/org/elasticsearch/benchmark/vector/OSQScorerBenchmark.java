@@ -59,6 +59,7 @@ public class OSQScorerBenchmark {
     byte[][] packedVector;
     byte[][] packedQuery;
 
+    int bukSize = 16;
     byte[][] bulkVectors;
 
 
@@ -76,10 +77,10 @@ public class OSQScorerBenchmark {
         for (int i = 0; i < numQueries; i++) {
             ThreadLocalRandom.current().nextBytes(packedQuery[i]);
         }
-        bulkVectors = new byte[numVectors/ 16][16 * size];
+        bulkVectors = new byte[numVectors/ bukSize][bukSize * size];
         for (int i = 0; i < bulkVectors.length; i++) {
-            for (int j = 0; j < 16; j++) {
-                System.arraycopy(packedVector[16 * i + j], 0, bulkVectors[i], j * size, size);
+            for (int j = 0; j < bukSize; j++) {
+                System.arraycopy(packedVector[bukSize * i + j], 0, bulkVectors[i], j * size, size);
             }
         }
     }
@@ -96,11 +97,11 @@ public class OSQScorerBenchmark {
 
     @Benchmark
     public void scoreIpByteBinByteBulk(Blackhole bh) {
-        long[] output = new long[16];
+        long[] output = new long[bukSize];
         for (byte[] query :  packedQuery) {
             for (byte[] vector : bulkVectors) {
                 Arrays.fill(output,  0L);
-                ESVectorUtil.ipByteBinByteBulk(query, vector, size, 16, output);
+                ESVectorUtil.ipByteBinByteBulk(query, vector, size, bukSize, output);
                 bh.consume(output);
             }
         }

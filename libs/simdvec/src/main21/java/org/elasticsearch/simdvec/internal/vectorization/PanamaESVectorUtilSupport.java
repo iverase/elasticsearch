@@ -50,7 +50,7 @@ public final class PanamaESVectorUtilSupport implements ESVectorUtilSupport {
 
     @Override
     public void ipByteBinByteBulk(byte[] q, byte[] d, int size, int count, long[] output) {
-        if (d.length >= 16 && HAS_FAST_INTEGER_VECTORS) {
+        if (size >= 16 && HAS_FAST_INTEGER_VECTORS) {
             if (VECTOR_BITSIZE >= 256) {
                 ipByteBinBulk256(q, d, size, count, output);
             } else if (VECTOR_BITSIZE == 128) {
