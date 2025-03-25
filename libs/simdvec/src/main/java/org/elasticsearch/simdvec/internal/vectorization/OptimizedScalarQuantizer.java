@@ -7,7 +7,7 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
-package org.elasticsearch.index.codec.vectors.es818;
+package org.elasticsearch.simdvec.internal.vectorization;
 
 import org.apache.lucene.index.VectorSimilarityFunction;
 import org.apache.lucene.util.VectorUtil;
@@ -241,5 +241,9 @@ public class OptimizedScalarQuantizer {
 
     private static double clamp(double x, double a, double b) {
         return Math.min(Math.max(x, a), b);
+    }
+
+    public static int discretize(int value, int bucket) {
+        return ((value + (bucket - 1)) / bucket) * bucket;
     }
 }

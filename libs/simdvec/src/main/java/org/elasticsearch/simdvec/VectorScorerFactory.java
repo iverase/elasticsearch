@@ -14,7 +14,9 @@ import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.util.hnsw.RandomVectorScorer;
 import org.apache.lucene.util.hnsw.RandomVectorScorerSupplier;
 import org.apache.lucene.util.quantization.QuantizedByteVectorValues;
+import org.elasticsearch.simdvec.internal.vectorization.OSQVectorsScorer;
 
+import java.io.IOException;
 import java.util.Optional;
 
 /** A factory of quantized vector scorers. */
@@ -53,4 +55,11 @@ public interface VectorScorerFactory {
      * @return an optional containing the vector scorer, or empty
      */
     Optional<RandomVectorScorer> getInt7SQVectorScorer(VectorSimilarityFunction sim, QuantizedByteVectorValues values, float[] queryVector);
+
+
+    /**
+     * Returns an optional containing an int7 scalar quantized vector scorer for
+     * the given parameters, or an empty optional if a scorer is not supported.
+     */
+    OSQVectorsScorer getOSQVectorsScorer(IndexInput input, int dimensions) throws IOException;
 }

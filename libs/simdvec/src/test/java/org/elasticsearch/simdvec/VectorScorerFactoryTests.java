@@ -23,6 +23,8 @@ import org.apache.lucene.util.hnsw.RandomVectorScorer;
 import org.apache.lucene.util.hnsw.RandomVectorScorerSupplier;
 import org.apache.lucene.util.quantization.QuantizedByteVectorValues;
 import org.apache.lucene.util.quantization.ScalarQuantizer;
+import org.elasticsearch.simdvec.internal.vectorization.OSQVectorsScorer;
+import org.elasticsearch.simdvec.internal.vectorization.OptimizedScalarQuantizer;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -439,6 +441,94 @@ public class VectorScorerFactoryTests extends AbstractVectorTestCase {
 
     RandomVectorScorerSupplier luceneScoreSupplier(QuantizedByteVectorValues values, VectorSimilarityFunction sim) throws IOException {
         return new Lucene99ScalarQuantizedVectorScorer(null).getRandomVectorScorerSupplier(sim, values);
+    }
+
+    public void testInt4BitDotProduct() throws Exception {
+        final int dimensions = random().nextInt(1, 2000);
+        final int length = OptimizedScalarQuantizer.discretize(dimensions, 64) / 8;
+        final int numVectors = random().nextInt(1, 100);
+        final byte[][] vectors = new byte[numVectors][length];
+        final byte[] query = new byte[4 * length];
+        try (Directory dir = new MMapDirectory(createTempDir())) {
+            try (IndexOutput out = dir.createOutput("tests.bin", IOContext.DEFAULT)) {
+                for (int i = 0; i < numVectors; i++) {
+                    random().nextBytes(vectors[i]);
+                    out.writeBytes(vectors[i], 0, length);
+                }
+            }
+            random().nextBytes(query);
+            try (IndexInput in = dir.openInput("tests.bin", IOContext.DEFAULT)) {
+                // Work on a slice that has just the right number of bytes to make the test fail with an
+                // index-out-of-bounds in case the implementation reads more than the allowed number of
+                // padding bytes.
+                final IndexInput slice = in.slice("test", 0, (long) length * numVectors);
+                final OSQVectorsScorer defaultScorer = new OSQVectorsScorer(slice, dimensions);
+                final OSQVectorsScorer panamaScorer = factory.get().getOSQVectorsScorer(in, dimensions);
+                for (int i = 0; i < numVectors; i++) {
+                    assertEquals(
+                        defaultScorer.int4BitDotProduct(query),
+                        panamaScorer.int4BitDotProduct(query));
+                    assertEquals(in.getFilePointer(), slice.getFilePointer());
+                }
+                assertEquals((long) length * numVectors, slice.getFilePointer());
+            }
+        }
+    }
+
+
+    public void testScoreBulk() throws Exception {
+        final int dimensions = random().nextInt(1, 2000);
+        final int length = OptimizedScalarQuantizer.discretize(dimensions, 64) / 8;
+        final int numVectors = OSQVectorsScorer.BULK_SIZE * random().nextInt(1, 10);
+        final byte[][] vectors = new byte[numVectors][length];
+        final byte[] query = new byte[4 * length];
+        try (Directory dir = new MMapDirectory(createTempDir())) {
+            try (IndexOutput out = dir.createOutput("tests.bin", IOContext.DEFAULT)) {
+                for (int i = 0; i < numVectors; i+= OSQVectorsScorer.BULK_SIZE) {
+                    for (int j = 0; j < OSQVectorsScorer.BULK_SIZE; j++) {
+                        random().nextBytes(vectors[i + j]);
+                        out.writeBytes(vectors[i + j], 0, length);
+                    }
+                    for (int j = 0; j < OSQVectorsScorer.BULK_SIZE; j++) {
+                        out.writeInt(Float.floatToIntBits(randomFloat()));
+                    }
+                    for (int j = 0; j < OSQVectorsScorer.BULK_SIZE; j++) {
+                        out.writeInt(Float.floatToIntBits(randomFloat()));
+                    }
+                    for (int j = 0; j < OSQVectorsScorer.BULK_SIZE; j++) {
+                        out.writeShort(randomShort());
+                    }
+                    for (int j = 0; j < OSQVectorsScorer.BULK_SIZE; j++) {
+                        out.writeInt(Float.floatToIntBits(randomFloat()));
+                    }
+                }
+
+            }
+            random().nextBytes(query);
+            OptimizedScalarQuantizer.QuantizationResult result = new OptimizedScalarQuantizer.QuantizationResult(
+               randomFloat(), randomFloat(), randomShort(), Short.toUnsignedInt(randomShort())
+            );
+            float centroidDp = randomFloat();
+            float[] scores1 = new float[numVectors];
+            float[] scores2 = new float[numVectors];
+            for (VectorSimilarityFunction similarityFunction : VectorSimilarityFunction.values()) {
+                try (IndexInput in = dir.openInput("tests.bin", IOContext.DEFAULT)) {
+                    // Work on a slice that has just the right number of bytes to make the test fail with an
+                    // index-out-of-bounds in case the implementation reads more than the allowed number of
+                    // padding bytes.
+                    for (int i = 0; i < numVectors; i+= OSQVectorsScorer.BULK_SIZE) {
+                        final IndexInput slice = in.slice("test", in.getFilePointer(), (long) (length + 14) * OSQVectorsScorer.BULK_SIZE);
+                        final OSQVectorsScorer defaultScorer = new OSQVectorsScorer(slice, dimensions);
+                        final OSQVectorsScorer panamaScorer = factory.get().getOSQVectorsScorer(in, dimensions);
+                        defaultScorer.quantizeScoreBulk(query, result, similarityFunction, centroidDp, scores1);
+                        panamaScorer.quantizeScoreBulk(query, result, similarityFunction, centroidDp, scores2);
+                        assertArrayEquals(scores1, scores2, 1e-2f);
+                        assertEquals(OSQVectorsScorer.BULK_SIZE * (length + 14), slice.getFilePointer());
+                        assertEquals(OSQVectorsScorer.BULK_SIZE * (length + 14), in.getFilePointer());
+                    }
+                }
+            }
+        }
     }
 
     // creates the vector based on the given ordinal, which is reproducible given the ord and dims

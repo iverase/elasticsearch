@@ -13,4 +13,5 @@ module org.elasticsearch.simdvec {
     requires org.elasticsearch.logging;
 
     exports org.elasticsearch.simdvec to org.elasticsearch.server;
+    exports org.elasticsearch.simdvec.internal.vectorization to org.elasticsearch.server;
 }

@@ -14,6 +14,7 @@ import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.util.hnsw.RandomVectorScorer;
 import org.apache.lucene.util.hnsw.RandomVectorScorerSupplier;
 import org.apache.lucene.util.quantization.QuantizedByteVectorValues;
+import org.elasticsearch.simdvec.internal.vectorization.OSQVectorsScorer;
 
 import java.util.Optional;
 
@@ -38,5 +39,10 @@ final class VectorScorerFactoryImpl implements VectorScorerFactory {
         float[] queryVector
     ) {
         throw new UnsupportedOperationException("should not reach here");
+    }
+
+    @Override
+    public OSQVectorsScorer getOSQVectorsScorer(IndexInput input, int dimensions) {
+        return new OSQVectorsScorer(input, dimensions);
     }
 }

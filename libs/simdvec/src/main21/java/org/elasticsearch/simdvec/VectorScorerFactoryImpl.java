@@ -17,12 +17,16 @@ import org.apache.lucene.util.hnsw.RandomVectorScorer;
 import org.apache.lucene.util.hnsw.RandomVectorScorerSupplier;
 import org.apache.lucene.util.quantization.QuantizedByteVectorValues;
 import org.elasticsearch.nativeaccess.NativeAccess;
+import java.lang.foreign.MemorySegment;
 import org.elasticsearch.simdvec.internal.Int7SQVectorScorer;
 import org.elasticsearch.simdvec.internal.Int7SQVectorScorerSupplier.DotProductSupplier;
 import org.elasticsearch.simdvec.internal.Int7SQVectorScorerSupplier.EuclideanSupplier;
 import org.elasticsearch.simdvec.internal.Int7SQVectorScorerSupplier.MaxInnerProductSupplier;
+import org.elasticsearch.simdvec.internal.vectorization.OSQVectorsScorer;
+import org.elasticsearch.simdvec.internal.vectorization.MemorySegmentOSQVectorsScorer;
 
 import java.util.Optional;
+import java.io.IOException;
 
 final class VectorScorerFactoryImpl implements VectorScorerFactory {
 
@@ -67,5 +71,16 @@ final class VectorScorerFactoryImpl implements VectorScorerFactory {
         if (input.length() < (long) vectorByteLength * maxOrd) {
             throw new IllegalArgumentException("input length is less than expected vector data");
         }
+    }
+
+    @Override
+    public OSQVectorsScorer getOSQVectorsScorer(IndexInput input, int length) throws IOException {
+        if (input instanceof MemorySegmentAccessInput msai) {
+            MemorySegment ms = msai.segmentSliceOrNull(0, input.length());
+            if (ms != null) {
+                return new MemorySegmentOSQVectorsScorer(input, length, ms);
+            }
+        }
+        return new OSQVectorsScorer(input, length);
     }
 }
