@@ -78,6 +78,17 @@ public class OSQScorerBenchmark {
 
     @Setup
     public void setup() throws IOException {
+        var optionalVectorScorerFactory = VectorScorerFactory.instance();
+        if (optionalVectorScorerFactory.isEmpty()) {
+            String msg = "JDK=["
+                + Runtime.version()
+                + "], os.name=["
+                + System.getProperty("os.name")
+                + "], os.arch=["
+                + System.getProperty("os.arch")
+                + "]";
+            throw new AssertionError("Vector scorer factory not present. Cannot run the benchmark. " + msg);
+        }
         Random random = new Random(123);
 
         this.length = OptimizedScalarQuantizer.discretize(dims, 64) / 8;
